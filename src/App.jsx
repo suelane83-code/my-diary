@@ -1163,7 +1163,7 @@ function FinanceTab({ themeObj, finances, onUpdateFinance, onDelete }) {
                     <button onClick={() => startEdit(item)} className="text-zinc-500 bg-zinc-50 p-1.5 rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-200/50">
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 border border-red-100/50">
+                    <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100 border border-red-100/50">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1274,7 +1274,7 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
 
   const [chatInput, setChatInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [viewingSavedId, setViewingSavedId] = useState(null); // 用于回看保存的对话
+  const [viewingSavedId, setViewingSavedId] = useState(null); 
   const chatEndRef = useRef(null);
 
   const handleDiaryImageUpload = (e) => {
@@ -1327,10 +1327,9 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
     setEditingId(null);
   };
 
-  // --- 强制使用最兼容的 v1beta 解决 "systemInstruction" 错误 ---
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
-    const USER_API_KEY = "AIzaSyA7lkl-PZp5aT0cbSxeaoxDRmtHsv3qSIY"; // 更新为您最新的 API Key
+    const USER_API_KEY = "AIzaSyDcm30t3uRj8ZXmtoN22fB9I6NHKm4btb0"; 
     const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
 
     if (!isCanvasPreview && !GEMINI_API_KEY) {
@@ -1368,45 +1367,61 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
       systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜，名叫树洞。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
-    // 锁定 v1beta 通道，这样它就不会再报错找不到 systemInstruction 了
-    const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
-    const apiVer = "v1beta"; 
-    const url = `https://generativelanguage.googleapis.com/${apiVer}/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+    // 智能尝试通道：优先使用正式 v1 接口
+    const baseModel = "gemini-1.5-flash";
+    const fallbackModel = "gemini-2.5-flash-preview-09-2025";
+    const tryUrls = isCanvasPreview 
+      ? [`https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${GEMINI_API_KEY}`]
+      : [
+          `https://generativelanguage.googleapis.com/v1/models/${baseModel}:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${GEMINI_API_KEY}`
+        ];
 
     for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        
-        const responseText = await response.text();
-        
-        if (!response.ok) {
-          let errorMsg = response.statusText;
-          try {
-             const errData = JSON.parse(responseText);
-             errorMsg = errData?.error?.message || errorMsg;
-          } catch (parseErr) {
-             errorMsg = responseText || errorMsg;
+      let lastErrorMsg = "";
+      
+      for (const url of tryUrls) {
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          const responseText = await response.text();
+          
+          if (!response.ok) {
+            let errorMsg = response.statusText;
+            try {
+               const errData = JSON.parse(responseText);
+               errorMsg = errData?.error?.message || errorMsg;
+            } catch (parseErr) {
+               errorMsg = responseText || errorMsg;
+            }
+            
+            // 如果这个门被拒，静默拦截并尝试下一个
+            if (errorMsg.includes("not found")) {
+               console.warn(`Model not found, trying fallback...`);
+               continue; 
+            }
+            throw new Error(errorMsg);
           }
           
-          if (errorMsg.includes("not found")) {
-             return `抱歉宝贝，Google 说这把钥匙打不开大门 🥺 (现在的 API Key 没有最新的 Gemini 1.5 权限)。请去【aistudio.google.com/app/apikey】点击蓝色按钮重新生成一个全新的 API Key 哦！`;
+          const result = responseText ? JSON.parse(responseText) : {};
+          return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
+        } catch (err) {
+          lastErrorMsg = err.message;
+          // 如果不是被拒（比如断网），跳出换门循环，去休眠重试
+          if (!lastErrorMsg.includes("not found")) {
+              break;
           }
-          throw new Error(errorMsg);
         }
-        
-        const result = responseText ? JSON.parse(responseText) : {};
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
-      } catch (err) {
-        console.error(`Gemini API Error with ${modelName}:`, err);
-        if (i === retries - 1) {
-           return `抱歉宝贝，脑电波暂时没连上 🥺 (错误: ${err.message})。`;
-        }
-        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
+      
+      if (i === retries - 1) {
+         return `抱歉宝贝，目前所有大门都被 Google 封锁啦 🥺 (原因: ${lastErrorMsg})。请确认一下钥匙有没有权限哦！`;
+      }
+      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
     }
   };
 
@@ -1435,7 +1450,7 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
     onSaveChatSession({
        title,
        date: new Date().toISOString(),
-       messages: sortedChats // 保存排序好的当前所有记录
+       messages: sortedChats 
     });
   };
 
@@ -1586,131 +1601,126 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
       )}
 
       {mode === 'chat' && (
-        <div className="flex flex-col gap-4 flex-1 pb-10 animate-in slide-in-from-right-4">
-          
-          {/* --- 当前对话窗口（定高，可滑动） --- */}
-          <div className="flex flex-col bg-white/80 backdrop-blur-md rounded-3xl border border-white shadow-sm h-[55vh] overflow-hidden">
-            <div className={`p-3 border-b border-white/50 flex items-center justify-between ${themeObj.light}`}>
-              <div className="flex items-center">
-                <div className={`w-9 h-9 rounded-full ${themeObj.primary} flex items-center justify-center text-white mr-3 shadow-sm`}>
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-zinc-900 text-sm">AI 树洞</h3>
-                  <p className="text-[10px] text-zinc-600">永远在线倾听你的心事</p>
-                </div>
+        <div className="flex flex-col bg-white/80 backdrop-blur-md rounded-3xl border border-white shadow-sm flex-1 h-[65vh] animate-in slide-in-from-right-4 overflow-hidden">
+          <div className={`p-4 border-b border-white/50 flex items-center justify-between ${themeObj.light}`}>
+            <div className="flex items-center">
+              <div className={`w-9 h-9 rounded-full ${themeObj.primary} flex items-center justify-center text-white mr-3 shadow-sm`}>
+                <Bot className="w-5 h-5" />
               </div>
-              {/* 新增的保存和清空按钮 */}
-              {sortedChats.length > 0 && (
-                 <div className="flex gap-2">
-                    <button onClick={handleSaveSession} className="text-[11px] bg-white text-zinc-700 px-2 py-1.5 rounded-lg font-medium shadow-sm hover:bg-zinc-50 transition-colors">保存对话</button>
-                    <button onClick={onClearChats} className="text-[11px] bg-red-50 text-red-500 px-2 py-1.5 rounded-lg font-medium shadow-sm hover:bg-red-100 transition-colors">清空</button>
-                 </div>
-              )}
+              <div>
+                <h3 className="font-medium text-zinc-900 text-sm">AI 树洞</h3>
+                <p className="text-[10px] text-zinc-600">永远在线倾听你的心事</p>
+              </div>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-white/40 shadow-inner">
-              {sortedChats.length === 0 && (
-                <div className="text-center text-zinc-500 text-sm mt-10 bg-white/60 p-4 rounded-2xl border border-white inline-block mx-auto w-3/4">
-                  跟我打个招呼吧！记录的聊天随时可以点右上角保存哦。
-                </div>
-              )}
-              {sortedChats.map(chat => (
-                <div key={chat.id} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-2xl p-3.5 text-[0.9rem] leading-relaxed shadow-sm ${
-                    chat.role === 'user' 
-                      ? `${themeObj.primary} text-white rounded-tr-sm` 
-                      : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-sm'
-                  }`}>
-                    {chat.text}
-                  </div>
-                </div>
-              ))}
-              {isThinking && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-zinc-200 text-zinc-500 rounded-2xl rounded-tl-sm p-4 text-sm flex space-x-1.5 shadow-sm">
-                    <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
-                    <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></span>
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            <form onSubmit={handleChatSubmit} className="p-3 bg-white border-t border-white/50 flex items-center gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="发送消息给树洞..."
-                className="flex-1 bg-zinc-50 border border-zinc-200 shadow-inner rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm transition-all"
-              />
-              <button 
-                type="submit" 
-                disabled={!chatInput.trim() || isThinking}
-                className={`p-3 rounded-full text-white transition-all ${!chatInput.trim() || isThinking ? 'bg-zinc-300' : `${themeObj.primary} active:scale-95 shadow-md`}`}
-              >
-                <Send className="w-5 h-5 ml-0.5" />
-              </button>
-            </form>
+            {sortedChats.length > 0 && (
+               <div className="flex gap-2">
+                  <button onClick={handleSaveSession} className="text-[11px] bg-white text-zinc-700 px-2 py-1.5 rounded-lg font-medium shadow-sm hover:bg-zinc-50 transition-colors">保存对话</button>
+                  <button onClick={onClearChats} className="text-[11px] bg-red-50 text-red-500 px-2 py-1.5 rounded-lg font-medium shadow-sm hover:bg-red-100 transition-colors">清空</button>
+               </div>
+            )}
           </div>
 
-          {/* --- 已保存的历史对话列表 --- */}
-          {savedChats.length > 0 && (
-             <div className="space-y-3 mt-8 pb-8">
-               <h4 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-3 px-2 flex items-center justify-between">
-                 已保存的对话夹 <span className="bg-white/50 px-2 py-0.5 rounded-full">{savedChats.length}</span>
-               </h4>
-               {savedChats.sort((a,b) => new Date(b.date) - new Date(a.date)).map(session => {
-                  const isViewing = viewingSavedId === session.id;
-                  return (
-                    <div key={session.id} className="bg-white/80 backdrop-blur-md rounded-3xl border border-white shadow-sm overflow-hidden transition-all">
-                      <div 
-                        onClick={() => setViewingSavedId(isViewing ? null : session.id)}
-                        className="p-4 flex justify-between items-center cursor-pointer hover:bg-white/90"
-                      >
-                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-zinc-100 rounded-xl text-zinc-500 border border-zinc-200">
-                               <BookOpen className="w-5 h-5"/>
-                            </div>
-                            <div>
-                               <p className="font-medium text-zinc-800 text-sm">{session.title}</p>
-                               <p className="text-[10px] text-zinc-400 mt-0.5">{session.messages?.length || 0} 条消息</p>
-                            </div>
-                         </div>
-                         <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isViewing ? 'rotate-180' : ''}`} />
-                      </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-white/40 shadow-inner">
+            {sortedChats.length === 0 && (
+              <div className="text-center text-zinc-500 text-sm mt-10 bg-white/60 p-4 rounded-2xl border border-white inline-block mx-auto w-3/4">
+                跟我打个招呼吧！记录的聊天随时可以点右上角保存哦。
+              </div>
+            )}
+            {sortedChats.map(chat => (
+              <div key={chat.id} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl p-3.5 text-[0.9rem] leading-relaxed shadow-sm ${
+                  chat.role === 'user' 
+                    ? `${themeObj.primary} text-white rounded-tr-sm` 
+                    : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-sm'
+                }`}>
+                  {chat.text}
+                </div>
+              </div>
+            ))}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-zinc-200 text-zinc-500 rounded-2xl rounded-tl-sm p-4 text-sm flex space-x-1.5 shadow-sm">
+                  <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce"></span>
+                  <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
+                  <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
 
-                      {/* 展开的静态对话记录 */}
-                      {isViewing && (
-                        <div className="px-4 pb-4 animate-in fade-in border-t border-zinc-100/80">
-                           <div className="max-h-60 overflow-y-auto space-y-3 py-3 pr-2 no-scrollbar bg-white/40 rounded-xl p-2 mt-2 shadow-inner border border-zinc-100">
-                              {session.messages?.map((msg, idx) => (
-                                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl p-3 text-[0.8rem] leading-relaxed shadow-sm ${
-                                      msg.role === 'user' 
-                                        ? `bg-zinc-200 text-zinc-800 rounded-tr-sm` 
-                                        : 'bg-white border border-zinc-200 text-zinc-700 rounded-tl-sm'
-                                    }`}>
-                                      {msg.text}
-                                    </div>
-                                 </div>
-                              ))}
-                           </div>
-                           <div className="flex justify-end mt-3">
-                              <button onClick={() => onDeleteSavedChat(session.id)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
-                                <Trash2 className="w-3 h-3 mr-1"/> 删除该记录
-                              </button>
-                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-               })}
-             </div>
-          )}
+          <form onSubmit={handleChatSubmit} className="p-3 bg-white border-t border-white/50 flex items-center gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="发送消息给树洞..."
+              className="flex-1 bg-zinc-50 border border-zinc-200 shadow-inner rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm transition-all"
+            />
+            <button 
+              type="submit" 
+              disabled={!chatInput.trim() || isThinking}
+              className={`p-3 rounded-full text-white transition-all ${!chatInput.trim() || isThinking ? 'bg-zinc-300' : `${themeObj.primary} active:scale-95 shadow-md`}`}
+            >
+              <Send className="w-5 h-5 ml-0.5" />
+            </button>
+          </form>
         </div>
+      )}
+
+      {/* --- 已保存的历史对话列表 --- */}
+      {mode === 'chat' && savedChats.length > 0 && (
+         <div className="space-y-3 mt-8 pb-8">
+           <h4 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-3 px-2 flex items-center justify-between">
+             已保存的对话夹 <span className="bg-white/50 px-2 py-0.5 rounded-full">{savedChats.length}</span>
+           </h4>
+           {savedChats.sort((a,b) => new Date(b.date) - new Date(a.date)).map(session => {
+              const isViewing = viewingSavedId === session.id;
+              return (
+                <div key={session.id} className="bg-white/80 backdrop-blur-md rounded-3xl border border-white shadow-sm overflow-hidden transition-all">
+                  <div 
+                    onClick={() => setViewingSavedId(isViewing ? null : session.id)}
+                    className="p-4 flex justify-between items-center cursor-pointer hover:bg-white/90"
+                  >
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-zinc-100 rounded-xl text-zinc-500 border border-zinc-200">
+                           <BookOpen className="w-5 h-5"/>
+                        </div>
+                        <div>
+                           <p className="font-medium text-zinc-800 text-sm">{session.title}</p>
+                           <p className="text-[10px] text-zinc-400 mt-0.5">{session.messages?.length || 0} 条消息</p>
+                        </div>
+                     </div>
+                     <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isViewing ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {/* 展开的静态对话记录 */}
+                  {isViewing && (
+                    <div className="px-4 pb-4 animate-in fade-in border-t border-zinc-100/80">
+                       <div className="max-h-60 overflow-y-auto space-y-3 py-3 pr-2 no-scrollbar bg-white/40 rounded-xl p-2 mt-2 shadow-inner border border-zinc-100">
+                          {session.messages?.map((msg, idx) => (
+                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] rounded-2xl p-3 text-[0.8rem] leading-relaxed shadow-sm ${
+                                  msg.role === 'user' 
+                                    ? `bg-zinc-200 text-zinc-800 rounded-tr-sm` 
+                                    : 'bg-white border border-zinc-200 text-zinc-700 rounded-tl-sm'
+                                }`}>
+                                  {msg.text}
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                       <div className="flex justify-end mt-3">
+                          <button onClick={() => onDeleteSavedChat(session.id)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
+                            <Trash2 className="w-3 h-3 mr-1"/> 删除该记录
+                          </button>
+                       </div>
+                    </div>
+                  )}
+                </div>
+              )
+           })}
+         </div>
       )}
     </div>
   );
