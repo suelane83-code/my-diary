@@ -1330,7 +1330,7 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
   // --- 强制使用最兼容的 v1beta 解决 "systemInstruction" 错误 ---
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
-    const USER_API_KEY = "AIzaSyDcm30t3uRj8ZXmtoN22fB9I6NHKm4btb0"; 
+    const USER_API_KEY = "AIzaSyA7lkl-PZp5aT0cbSxeaoxDRmtHsv3qSIY"; // 更新为您最新的 API Key
     const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
 
     if (!isCanvasPreview && !GEMINI_API_KEY) {
