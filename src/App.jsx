@@ -5,7 +5,8 @@ import {
   CheckCircle2, Palette, LogOut, Trash2, Loader2,
   Smile, Edit3, X, Bot, Send,
   Leaf, Flower2, Droplets, Sun, Star,
-  BookOpen, Download, FileText
+  BookOpen, Download, FileText,
+  Search, Mic, Camera, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
@@ -87,7 +88,7 @@ export default function App() {
   const [timetableRemark, setTimetableRemark] = useState('');
   const [diaries, setDiaries] = useState([]);
   const [chats, setChats] = useState([]);
-  const [words, setWords] = useState([]); // 新增：生字本状态
+  const [words, setWords] = useState([]); 
 
   // 1. Initialize Auth
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function App() {
     const financesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_finances`);
     const diariesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_diaries`);
     const chatsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_chats`);
-    const wordsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_words`); // 新增：生字数据库
+    const wordsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_words`); 
     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `${prefix}_settings`, 'config');
 
     // Listeners
@@ -125,7 +126,7 @@ export default function App() {
     const unsubFinances = onSnapshot(financesRef, (snap) => setFinances(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubDiaries = onSnapshot(diariesRef, (snap) => setDiaries(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubChats = onSnapshot(chatsRef, (snap) => setChats(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
-    const unsubWords = onSnapshot(wordsRef, (snap) => setWords(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error); // 新增：监听生字
+    const unsubWords = onSnapshot(wordsRef, (snap) => setWords(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error); 
     
     // Settings listener
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
@@ -313,11 +314,10 @@ export default function App() {
                   ，欢迎回来，<br className="md:hidden"/>我是您的专属树洞。
                 </h1>
               )}
+              {/* 移除了显眼的房号，只保留同步状态 */}
               <p className="text-zinc-400 text-[11px] mt-1.5 font-light tracking-wide flex items-center gap-1.5 opacity-80">
                 <Leaf className="w-3 h-3 text-emerald-400" />
-                <span>房号: {roomNumber}</span>
-                <span className="w-1 h-1 bg-zinc-200 rounded-full"></span>
-                <span>{isLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : '已同步'}</span>
+                <span>{isLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : '云端已同步'}</span>
               </p>
             </div>
             
@@ -413,7 +413,10 @@ export default function App() {
             <NavItem icon={<ImageIcon size={20} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
             <NavItem icon={<Smile size={20} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
           </div>
-          <p className="text-center text-[8px] text-zinc-400/40 mt-1 font-light tracking-widest pointer-events-none">This app is made by Suelane 12/5/2026.</p>
+          {/* 将房号藏在了最底部的这里，并且做了低透明度处理 */}
+          <p className="text-center text-[8px] text-zinc-400/40 mt-1 font-light tracking-widest pointer-events-none flex items-center justify-center gap-1">
+            This app is made by Suelane 12/5/2026. <span className="opacity-10">|</span> <span className="opacity-30 tracking-normal">Room: {roomNumber}</span>
+          </p>
         </nav>
       </div>
     </div>
@@ -451,7 +454,6 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
   const [category, setCategory] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // 新增：生字填写状态
   const [word, setWord] = useState('');
   const [meaning, setMeaning] = useState('');
   const [wordCategory, setWordCategory] = useState('英文');
@@ -602,7 +604,6 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
         </div>
       </section>
 
-      {/* --- 新增: 记生字区块 --- */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase">记生字</h2>
@@ -779,7 +780,6 @@ function FinanceTab({ themeObj, finances, onDelete }) {
   const balance = totalIncome - totalExpense;
   const sortedFinances = [...finances].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // --- CALCULATE PIE CHART DATA ---
   const expenses = finances.filter(f => f.type === 'expense');
   const categoryTotals = expenses.reduce((acc, curr) => {
     acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
@@ -787,11 +787,11 @@ function FinanceTab({ themeObj, finances, onDelete }) {
   }, {});
   
   const expenseColors = {
-    '饮食': '#fbbf24', // yellow
-    '交通': '#60a5fa', // blue
-    '学习用品': '#34d399', // green
-    '娱乐': '#a78bfa', // purple
-    '其他': '#f472b6' // pink
+    '饮食': '#fbbf24', 
+    '交通': '#60a5fa', 
+    '学习用品': '#34d399', 
+    '娱乐': '#a78bfa', 
+    '其他': '#f472b6' 
   };
 
   return (
@@ -819,7 +819,6 @@ function FinanceTab({ themeObj, finances, onDelete }) {
         </div>
       </div>
 
-      {/* --- ADD PIE CHART UI --- */}
       {totalExpense > 0 && (
         <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-white shadow-sm flex flex-col items-center animate-in slide-in-from-bottom-4">
           <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-4 w-full text-left">支出统计图</h3>
@@ -979,7 +978,9 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   
   // Diary States
   const [diaryContent, setDiaryContent] = useState('');
+  const [diaryImage, setDiaryImage] = useState(null); // 新增：保存日记照片
   const [selectedEmoji, setSelectedEmoji] = useState('😀');
+  const [expandedId, setExpandedId] = useState(null); // 新增：用于折叠/展开历史记录
   const emojis = ['😀', '🥰', '😂', '🥺', '😡', '😴', '✨', '🌧️', '💪'];
 
   // Chat States
@@ -987,25 +988,46 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   const [isThinking, setIsThinking] = useState(false);
   const chatEndRef = useRef(null);
 
+  // 处理照片上传
+  const handleDiaryImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800; // 压缩图片以节省数据库空间
+          const scaleSize = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          setDiaryImage(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleDiarySubmit = (e) => {
     e.preventDefault();
-    if (!diaryContent.trim()) return;
+    if (!diaryContent.trim() && !diaryImage) return; // 没写字也没发照片就不让保存
     onAddDiary({
       emoji: selectedEmoji,
       content: diaryContent,
+      image: diaryImage, // 把照片存进数据库
       date: new Date().toISOString()
     });
     setDiaryContent('');
+    setDiaryImage(null); // 清空照片预览
   };
 
   const callGeminiWithRetry = async (prompt, retries = 3) => {
-    // 检测当前是否在网页预览环境中运行
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
-    
-    // 你的专属真实 API 密钥 (用于 Vercel 正式环境)
     const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
 
-    // 智能切换：预览环境使用内置空密钥和 2.5 模型；Vercel 环境使用你的真实密钥和 1.5 模型
     const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
     const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
 
@@ -1090,7 +1112,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
       </div>
 
       {mode === 'diary' && (
-        <div className="space-y-6 flex-1">
+        <div className="space-y-6 flex-1 pb-10">
           <form onSubmit={handleDiarySubmit} className="bg-white/80 backdrop-blur-md rounded-3xl p-5 shadow-sm border border-white animate-in slide-in-from-left-4">
             <h3 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase mb-3">今日心情</h3>
             <div className="flex overflow-x-auto space-x-2 pb-3 mb-2 no-scrollbar">
@@ -1109,33 +1131,82 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
               value={diaryContent}
               onChange={(e) => setDiaryContent(e.target.value)}
               placeholder="今天发生了什么事？记录一下吧..."
-              className="w-full bg-white/50 border border-zinc-100 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-black min-h-[120px] resize-none mb-4 text-sm shadow-inner"
+              className="w-full bg-white/50 border border-zinc-100 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-black min-h-[120px] resize-none mb-3 text-sm shadow-inner"
             />
-            <button 
-              type="submit" 
-              disabled={!diaryContent.trim()}
-              className={`w-full py-4 rounded-xl font-medium flex items-center justify-center transition-all ${
-                !diaryContent.trim() ? 'bg-zinc-100 text-zinc-400' : `${themeObj.primary} text-white active:scale-[0.98] shadow-md`
-              }`}
-            >
-              保存日记
-            </button>
+            
+            {/* 照片预览区 */}
+            {diaryImage && (
+              <div className="relative mb-3 animate-in fade-in">
+                 <img src={diaryImage} alt="Diary attached" className="w-full h-32 object-cover rounded-xl border border-zinc-200" />
+                 <button type="button" onClick={() => setDiaryImage(null)} className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors">
+                   <X className="w-4 h-4"/>
+                 </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input type="file" id="diary-img-upload" accept="image/*" onChange={handleDiaryImageUpload} className="hidden" />
+              <label htmlFor="diary-img-upload" className="py-4 px-4 bg-zinc-50 text-zinc-500 rounded-xl flex items-center justify-center cursor-pointer hover:bg-zinc-100 transition-colors shadow-sm">
+                 <Camera className="w-5 h-5" />
+              </label>
+              <button 
+                type="submit" 
+                disabled={!diaryContent.trim() && !diaryImage}
+                className={`flex-1 py-4 rounded-xl font-medium flex items-center justify-center transition-all ${
+                  (!diaryContent.trim() && !diaryImage) ? 'bg-zinc-100 text-zinc-400' : `${themeObj.primary} text-white active:scale-[0.98] shadow-md`
+                }`}
+              >
+                保存日记
+              </button>
+            </div>
           </form>
 
-          <div className="space-y-4">
-            {sortedDiaries.map(diary => (
-              <div key={diary.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-start group relative">
-                <div className="text-3xl mr-4">{diary.emoji}</div>
-                <div className="flex-1 pr-6">
-                  <p className="text-xs text-zinc-400 mb-1">{new Date(diary.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
-                  <p className="text-zinc-800 text-sm whitespace-pre-wrap leading-relaxed">{diary.content}</p>
-                </div>
-                <button onClick={() => onDeleteDiary(diary.id)} className="absolute top-4 right-4 text-red-400 md:opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-full shadow-sm">
-                  <Trash2 className="w-3.5 h-3.5"/>
-                </button>
-              </div>
-            ))}
-          </div>
+          {/* 新增：历史回忆折叠列表 */}
+          {sortedDiaries.length > 0 && (
+            <div className="space-y-3 mt-8">
+              <h4 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-3 px-2">历史回忆</h4>
+              {sortedDiaries.map(diary => {
+                const isExpanded = expandedId === diary.id;
+                return (
+                  <div key={diary.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm overflow-hidden transition-all duration-300">
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/50 transition-colors"
+                      onClick={() => setExpandedId(isExpanded ? null : diary.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl drop-shadow-sm">{diary.emoji}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-zinc-800 text-[15px]">{new Date(diary.date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</span>
+                          <span className="text-zinc-400 text-[10px]">{new Date(diary.date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {diary.image && <Camera className="w-3.5 h-3.5 text-zinc-300" />}
+                        {isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-400" /> : <ChevronRight className="w-4 h-4 text-zinc-400" />}
+                      </div>
+                    </div>
+                    
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-2 animate-in fade-in border-t border-zinc-100/50 mt-1">
+                        {diary.image && (
+                          <div className="mb-4 rounded-xl overflow-hidden border border-zinc-100 shadow-sm">
+                            <img src={diary.image} alt="Memory" className="w-full object-cover max-h-64" />
+                          </div>
+                        )}
+                        {diary.content && <p className="text-zinc-700 text-[13px] whitespace-pre-wrap leading-relaxed">{diary.content}</p>}
+                        
+                        <div className="flex justify-end mt-4">
+                          <button onClick={() => onDeleteDiary(diary.id)} className="text-red-400 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
+                            <Trash2 className="w-3 h-3 mr-1"/> 删除记录
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1202,32 +1273,53 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   );
 }
 
-// --- WORDS TAB (全新组件，放在代码最末尾) ---
+// --- WORDS TAB ---
 function WordsTab({ themeObj, words, onDelete }) {
   const [filter, setFilter] = useState('全部');
+  const [searchQuery, setSearchQuery] = useState(''); // 新增：搜索内容
+  const [isListening, setIsListening] = useState(false); // 新增：语音监听状态
   const categories = ['全部', '华文', '国文', '英文', '其他'];
 
-  const filteredWords = filter === '全部' 
-    ? words 
-    : words.filter(w => w.category === filter);
+  // 新增：语音输入功能 (调用浏览器原生接口)
+  const handleVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'zh-CN'; // 默认设为中文，部分浏览器会自动识别中英混合
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event) => {
+        setSearchQuery(event.results[0][0].transcript);
+        setIsListening(false);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } else {
+      alert("当前的浏览器可能不支持语音识别，请直接使用键盘打字，或者用手机输入法自带的语音键哦~");
+    }
+  };
+
+  const filteredWords = words.filter(w => {
+    const matchCat = filter === '全部' || w.category === filter;
+    const matchSearch = w.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        w.meaning.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
 
   const sortedWords = [...filteredWords].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // 导出为 Excel (CSV 格式) 功能
   const exportToCSV = () => {
     const headers = ['语言分类', '生字', '意思', '记录日期'];
     const csvRows = [headers.join(',')];
     
     words.forEach(w => {
       const dateStr = new Date(w.date).toLocaleDateString('zh-CN');
-      // 处理 Excel 表格里的引号
       const safeWord = `"${w.word.replace(/"/g, '""')}"`;
       const safeMeaning = `"${w.meaning.replace(/"/g, '""')}"`;
       const row = [w.category, safeWord, safeMeaning, dateStr];
       csvRows.push(row.join(','));
     });
     
-    // 加入 BOM 头部，确保 Excel 打开中文不会乱码
     const csvString = '\uFEFF' + csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -1243,7 +1335,7 @@ function WordsTab({ themeObj, words, onDelete }) {
       <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden transition-colors duration-500 flex justify-between items-center`}>
         <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full pointer-events-none blur-xl"></div>
         <div>
-          <p className="text-white/80 text-sm mb-1">我的词库</p>
+          <p className="text-white/80 text-sm mb-1">我的词汇</p>
           <h2 className="text-3xl font-medium drop-shadow-sm flex items-baseline">
             {words.length} <span className="text-sm ml-1 text-white/80 font-normal">个词汇</span>
           </h2>
@@ -1251,10 +1343,28 @@ function WordsTab({ themeObj, words, onDelete }) {
         <button 
           onClick={exportToCSV}
           disabled={words.length === 0}
-          className="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors p-3 rounded-2xl flex flex-col items-center justify-center border border-white/20 disabled:opacity-50"
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors p-3 rounded-2xl flex flex-col items-center justify-center border border-white/20 disabled:opacity-50 active:scale-95"
         >
           <Download className="w-5 h-5 mb-1" />
           <span className="text-[10px] font-medium tracking-wide">Excel</span>
+        </button>
+      </div>
+
+      {/* 新增：智能搜索框 */}
+      <div className="relative mb-2">
+        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜寻生字或意思..."
+          className="w-full bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl py-3.5 pl-11 pr-12 focus:outline-none focus:ring-1 focus:ring-zinc-300 transition-all text-sm"
+        />
+        <button 
+          onClick={handleVoiceSearch} 
+          className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-zinc-400 hover:bg-zinc-100'}`}
+        >
+          <Mic className="w-4 h-4" />
         </button>
       </div>
 
@@ -1266,7 +1376,7 @@ function WordsTab({ themeObj, words, onDelete }) {
             className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               filter === cat 
                 ? `${themeObj.primary} text-white shadow-md` 
-                : 'bg-white/60 text-zinc-600 hover:bg-white'
+                : 'bg-white/60 text-zinc-600 hover:bg-white border border-white'
             }`}
           >
             {cat}
@@ -1299,7 +1409,7 @@ function WordsTab({ themeObj, words, onDelete }) {
         ) : (
           <div className="text-center py-12 text-zinc-400 bg-white/40 rounded-3xl border border-dashed border-zinc-300">
             <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-20" />
-            <p>还没有记录的生字哦</p>
+            <p>{searchQuery ? '没有搜寻到相关生字哦' : '还没有记录的生字哦'}</p>
           </div>
         )}
       </div>
