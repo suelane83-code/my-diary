@@ -1090,9 +1090,18 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
             body: JSON.stringify(currentPayload)
           });
           
+          // 使用 text() 获取原始响应内容，避免抛出 Unexpected end of input 错误
+          const responseText = await response.text();
+          
           if (!response.ok) {
-            const errData = await response.json();
-            lastErrorMsg = errData?.error?.message || response.statusText;
+            let errorMsg = response.statusText;
+            try {
+               const errData = JSON.parse(responseText);
+               errorMsg = errData?.error?.message || errorMsg;
+            } catch (parseErr) {
+               errorMsg = responseText || errorMsg;
+            }
+            lastErrorMsg = errorMsg;
             
             // 核心修复：如果是 404 或者提示找不到该模型，直接拦截，换下一个大门！
             if (response.status === 404 || lastErrorMsg.includes("not found")) {
@@ -1102,7 +1111,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
             throw new Error(lastErrorMsg);
           }
           
-          const result = await response.json();
+          const result = responseText ? JSON.parse(responseText) : {};
           return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
         } catch (err) {
           lastErrorMsg = err.message;
@@ -1115,7 +1124,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
       }
       
       if (i === retries - 1) {
-         return `抱歉宝贝，这把钥匙可能没权限进大门 🥺 (错误: ${lastErrorMsg})。请让妈妈去 Google AI Studio 重新生成一个新的 API Key 试试哦！`;
+         return `抱歉宝贝，脑电波暂时没连上 🥺 (错误: ${lastErrorMsg})。请检查一下 API Key 哦！`;
       }
       await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
     }
