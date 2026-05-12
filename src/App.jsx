@@ -442,10 +442,11 @@ export default function App() {
         <div className={`absolute top-10 right-0 w-64 h-64 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-1 bg-gradient-to-br ${currentTheme.gradient}`}></div>
         <div className={`absolute bottom-20 left-0 w-56 h-56 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-2 bg-gradient-to-tr ${currentTheme.gradient}`}></div>
 
+        {/* --- DYNAMIC BACKGROUND PATTERN (加深透明度和增大尺寸) --- */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <DecorIcon className={`absolute top-[10%] -left-10 w-48 h-48 opacity-15 ${currentTheme.text} rotate-12 animate-float-2`} />
-          <DecorIcon className={`absolute top-[40%] -right-16 w-64 h-64 opacity-15 ${currentTheme.text} -rotate-12 animate-float-1`} />
-          <DecorIcon className={`absolute -bottom-5 left-[15%] w-40 h-40 opacity-15 ${currentTheme.text} rotate-45 animate-float-2`} />
+          <DecorIcon className={`absolute top-[10%] -left-10 w-56 h-56 opacity-40 ${currentTheme.text} rotate-12 animate-float-2`} />
+          <DecorIcon className={`absolute top-[40%] -right-16 w-72 h-72 opacity-40 ${currentTheme.text} -rotate-12 animate-float-1`} />
+          <DecorIcon className={`absolute -bottom-5 left-[15%] w-48 h-48 opacity-40 ${currentTheme.text} rotate-45 animate-float-2`} />
         </div>
 
         <div className="flex-1 overflow-y-auto pb-28 px-5 pt-12 no-scrollbar relative z-10">
@@ -1306,7 +1307,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onUpdateDiary, onDe
 
   const saveEditDiary = (id, oldDiary) => {
     onUpdateDiary(id, {
-      ...oldDiary, // 保留原来的图片和时间
+      ...oldDiary, 
       content: editDiaryContent,
       emoji: editDiaryEmoji
     });
@@ -1354,8 +1355,10 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onUpdateDiary, onDe
       systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜，名叫树洞。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
+    // 强行使用稳定通道 v1
     const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+    const apiVer = isCanvasPreview ? "v1beta" : "v1";
+    const url = `https://generativelanguage.googleapis.com/${apiVer}/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     for (let i = 0; i < retries; i++) {
       try {
@@ -1546,7 +1549,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onUpdateDiary, onDe
                             <Edit3 className="w-3 h-3 mr-1"/> 编辑
                           </button>
                           <button onClick={() => onDeleteDiary(diary.id)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
-                            <Trash2 className="w-3 h-3 mr-1"/> 删除
+                            <Trash className="w-3 h-3 mr-1"/> 删除
                           </button>
                         </div>
                       </div>
