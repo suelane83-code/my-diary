@@ -4,7 +4,8 @@ import {
   Plus, Clock, MapPin, User, Upload, ArrowDownRight, ArrowUpRight,
   CheckCircle2, Palette, LogOut, Trash2, Loader2,
   Smile, Edit3, X, Bot, Send,
-  Leaf, Flower2, Droplets, Sun, Star
+  Leaf, Flower2, Droplets, Sun, Star,
+  BookOpen, Download, FileText
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
@@ -86,6 +87,7 @@ export default function App() {
   const [timetableRemark, setTimetableRemark] = useState('');
   const [diaries, setDiaries] = useState([]);
   const [chats, setChats] = useState([]);
+  const [words, setWords] = useState([]); // 新增：生字本状态
 
   // 1. Initialize Auth
   useEffect(() => {
@@ -115,6 +117,7 @@ export default function App() {
     const financesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_finances`);
     const diariesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_diaries`);
     const chatsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_chats`);
+    const wordsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_words`); // 新增：生字数据库
     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `${prefix}_settings`, 'config');
 
     // Listeners
@@ -122,6 +125,7 @@ export default function App() {
     const unsubFinances = onSnapshot(financesRef, (snap) => setFinances(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubDiaries = onSnapshot(diariesRef, (snap) => setDiaries(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubChats = onSnapshot(chatsRef, (snap) => setChats(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
+    const unsubWords = onSnapshot(wordsRef, (snap) => setWords(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error); // 新增：监听生字
     
     // Settings listener
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
@@ -139,7 +143,7 @@ export default function App() {
     }, (err) => { console.error(err); setIsLoading(false); });
 
     return () => {
-      unsubEvents(); unsubFinances(); unsubDiaries(); unsubChats(); unsubSettings();
+      unsubEvents(); unsubFinances(); unsubDiaries(); unsubChats(); unsubWords(); unsubSettings();
     };
   }, [user, isLoggedIn, roomNumber]);
 
@@ -350,6 +354,7 @@ export default function App() {
               themeObj={currentTheme}
               events={events} 
               onAddFinance={(data) => addRecord('finances', data)} 
+              onAddWord={(data) => addRecord('words', data)}
             />
           )}
           {activeTab === 'events' && (
@@ -389,16 +394,24 @@ export default function App() {
               onAddChat={(data) => addRecord('chats', data)}
             />
           )}
+          {activeTab === 'words' && (
+            <WordsTab 
+              themeObj={currentTheme}
+              words={words}
+              onDelete={(id) => deleteRecord('words', id)}
+            />
+          )}
         </div>
 
         {/* Bottom Navigation */}
-        <nav className="absolute bottom-0 w-full bg-white/70 backdrop-blur-xl border-t border-white/50 pt-2 px-4 pb-2 flex flex-col z-40 rounded-t-[2rem]">
+        <nav className="absolute bottom-0 w-full bg-white/70 backdrop-blur-xl border-t border-white/50 pt-2 px-2 pb-2 flex flex-col z-40 rounded-t-[2rem]">
           <div className="flex justify-between items-center w-full">
-            <NavItem icon={<Home size={22} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
-            <NavItem icon={<Calendar size={22} />} label="活动" active={activeTab === 'events'} onClick={() => setActiveTab('events')} themeObj={currentTheme}/>
-            <NavItem icon={<Wallet size={22} />} label="财务" active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} themeObj={currentTheme}/>
-            <NavItem icon={<ImageIcon size={22} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
-            <NavItem icon={<Smile size={22} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
+            <NavItem icon={<Home size={20} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
+            <NavItem icon={<BookOpen size={20} />} label="生字" active={activeTab === 'words'} onClick={() => setActiveTab('words')} themeObj={currentTheme}/>
+            <NavItem icon={<Calendar size={20} />} label="活动" active={activeTab === 'events'} onClick={() => setActiveTab('events')} themeObj={currentTheme}/>
+            <NavItem icon={<Wallet size={20} />} label="财务" active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} themeObj={currentTheme}/>
+            <NavItem icon={<ImageIcon size={20} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
+            <NavItem icon={<Smile size={20} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
           </div>
           <p className="text-center text-[8px] text-zinc-400/40 mt-1 font-light tracking-widest pointer-events-none">This app is made by Suelane 12/5/2026.</p>
         </nav>
@@ -420,23 +433,30 @@ function NavItem({ icon, label, active, onClick, themeObj }) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center w-14 h-14 transition-all duration-300 ${active ? themeObj.text : 'text-zinc-400 hover:text-zinc-600'}`}
+      className={`flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 ${active ? themeObj.text : 'text-zinc-400 hover:text-zinc-600'}`}
     >
       <div className={`mb-1 transition-transform duration-300 ${active ? 'scale-110' : 'scale-100'}`}>
         {icon}
       </div>
-      <span className="text-[10px] font-medium tracking-wider">{label}</span>
+      <span className="text-[9px] font-medium tracking-wider">{label}</span>
       <div className={`w-1 h-1 rounded-full ${themeObj.primary} mt-1 transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-0'}`} />
     </button>
   );
 }
 
 // --- HOME TAB ---
-function HomeTab({ themeObj, events, onAddFinance }) {
+function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
   const [finType, setFinType] = useState('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // 新增：生字填写状态
+  const [word, setWord] = useState('');
+  const [meaning, setMeaning] = useState('');
+  const [wordCategory, setWordCategory] = useState('英文');
+  const [showWordSuccess, setShowWordSuccess] = useState(false);
+  const wordCategories = ['华文', '国文', '英文', '其他'];
 
   const expenseCategories = ['饮食', '交通', '学习用品', '娱乐', '其他'];
   const incomeCategories = ['零用钱', '红包', '兼职/奖金', '其他'];
@@ -459,6 +479,21 @@ function HomeTab({ themeObj, events, onAddFinance }) {
     setCategory('');
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2000);
+  };
+
+  const handleWordSubmit = (e) => {
+    e.preventDefault();
+    if (!word || !meaning) return;
+    onAddWord({
+      word,
+      meaning,
+      category: wordCategory,
+      date: new Date().toISOString()
+    });
+    setWord('');
+    setMeaning('');
+    setShowWordSuccess(true);
+    setTimeout(() => setShowWordSuccess(false), 2000);
   };
 
   return (
@@ -561,6 +596,68 @@ function HomeTab({ themeObj, events, onAddFinance }) {
                 <span className="flex items-center"><CheckCircle2 className="w-5 h-5 mr-2" /> 记录成功</span>
               ) : (
                 '保存记录'
+              )}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {/* --- 新增: 记生字区块 --- */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase">记生字</h2>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 shadow-sm border border-white">
+          <div className="flex overflow-x-auto space-x-2 pb-4 no-scrollbar">
+            {wordCategories.map(cat => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setWordCategory(cat)}
+                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  wordCategory === cat 
+                    ? `${themeObj.primary} text-white shadow-md` 
+                    : 'bg-white/50 text-zinc-600 hover:bg-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleWordSubmit} className="space-y-3">
+            <input
+              type="text"
+              placeholder="新学的生字/词语 (如: Apple)"
+              value={word}
+              onChange={(e) => setWord(e.target.value)}
+              className="w-full bg-white/50 border border-zinc-100 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
+              required
+            />
+            <input
+              type="text"
+              placeholder="意思 (如: 苹果)"
+              value={meaning}
+              onChange={(e) => setMeaning(e.target.value)}
+              className="w-full bg-white/50 border border-zinc-100 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
+              required
+            />
+            <button
+              type="submit"
+              disabled={!word || !meaning}
+              className={`w-full py-3.5 mt-2 rounded-2xl font-medium flex items-center justify-center transition-all duration-300 ${
+                !word || !meaning 
+                  ? 'bg-zinc-100 text-zinc-400' 
+                  : showWordSuccess 
+                    ? 'bg-green-500 text-white'
+                    : 'bg-zinc-900 text-white active:scale-[0.98]'
+              }`}
+            >
+              {showWordSuccess ? (
+                <span className="flex items-center"><CheckCircle2 className="w-5 h-5 mr-2" /> 记录成功</span>
+              ) : (
+                '加入生字本'
               )}
             </button>
           </form>
@@ -902,16 +999,21 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   };
 
   const callGeminiWithRetry = async (prompt, retries = 3) => {
-    // ⚠️⚠️⚠️ 终极重要步骤：在这里填入你的专属 Gemini API Key ⚠️⚠️⚠️
-    // 获取免费 Key 的网址：https://aistudio.google.com/app/apikey
-    // 请把下面双引号里的内容，替换成你申请到的真实密钥（一长串英文字母和数字）
-    const GEMINI_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
+    // 检测当前是否在网页预览环境中运行
+    const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
+    
+    // 你的专属真实 API 密钥 (用于 Vercel 正式环境)
+    const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "请把你的GEMINI密钥粘贴在这里") {
+    // 智能切换：预览环境使用内置空密钥和 2.5 模型；Vercel 环境使用你的真实密钥和 1.5 模型
+    const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
+    const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
+
+    if (!isCanvasPreview && !GEMINI_API_KEY) {
          return "呜呜宝贝，我的脑电波暂时连不上啦 🥺 (缺少 API Key)，让妈妈帮忙在代码里设置一下 API 密钥，我们就能开心聊天啦~ ✨";
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
       systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
@@ -924,10 +1026,17 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('API Error');
+        
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`Gemini API Failed: ${response.status}`, errText);
+          throw new Error('API Error');
+        }
+        
         const result = await response.json();
         return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
       } catch (err) {
+        console.error("Gemini API Error:", err);
         if (i === retries - 1) return "抱歉宝贝，我现在脑子有点转不过来了，我们稍后再聊吧~ (网络错误) 🥺";
         await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
@@ -1089,6 +1198,111 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- WORDS TAB (全新组件，放在代码最末尾) ---
+function WordsTab({ themeObj, words, onDelete }) {
+  const [filter, setFilter] = useState('全部');
+  const categories = ['全部', '华文', '国文', '英文', '其他'];
+
+  const filteredWords = filter === '全部' 
+    ? words 
+    : words.filter(w => w.category === filter);
+
+  const sortedWords = [...filteredWords].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // 导出为 Excel (CSV 格式) 功能
+  const exportToCSV = () => {
+    const headers = ['语言分类', '生字', '意思', '记录日期'];
+    const csvRows = [headers.join(',')];
+    
+    words.forEach(w => {
+      const dateStr = new Date(w.date).toLocaleDateString('zh-CN');
+      // 处理 Excel 表格里的引号
+      const safeWord = `"${w.word.replace(/"/g, '""')}"`;
+      const safeMeaning = `"${w.meaning.replace(/"/g, '""')}"`;
+      const row = [w.category, safeWord, safeMeaning, dateStr];
+      csvRows.push(row.join(','));
+    });
+    
+    // 加入 BOM 头部，确保 Excel 打开中文不会乱码
+    const csvString = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', '我的生字本.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500 relative z-10 pb-4">
+      <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden transition-colors duration-500 flex justify-between items-center`}>
+        <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full pointer-events-none blur-xl"></div>
+        <div>
+          <p className="text-white/80 text-sm mb-1">我的词库</p>
+          <h2 className="text-3xl font-medium drop-shadow-sm flex items-baseline">
+            {words.length} <span className="text-sm ml-1 text-white/80 font-normal">个词汇</span>
+          </h2>
+        </div>
+        <button 
+          onClick={exportToCSV}
+          disabled={words.length === 0}
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors p-3 rounded-2xl flex flex-col items-center justify-center border border-white/20 disabled:opacity-50"
+        >
+          <Download className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium tracking-wide">Excel</span>
+        </button>
+      </div>
+
+      <div className="flex overflow-x-auto space-x-2 pb-2 no-scrollbar">
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              filter === cat 
+                ? `${themeObj.primary} text-white shadow-md` 
+                : 'bg-white/60 text-zinc-600 hover:bg-white'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {sortedWords.length > 0 ? (
+          sortedWords.map(w => (
+            <div key={w.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
+              <div className="flex items-center">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-zinc-100/80 text-zinc-500 border border-zinc-200`}>
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-zinc-900 text-lg leading-tight">{w.word}</p>
+                  <p className="text-sm text-zinc-500 mt-1">{w.meaning}</p>
+                  <p className="text-[10px] text-zinc-400 mt-1.5 flex items-center gap-2">
+                    <span className="bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600 font-medium">{w.category}</span>
+                    {new Date(w.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => onDelete(w.id)} className="text-red-400 bg-white p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity self-start">
+                  <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-12 text-zinc-400 bg-white/40 rounded-3xl border border-dashed border-zinc-300">
+            <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-20" />
+            <p>还没有记录的生字哦</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
