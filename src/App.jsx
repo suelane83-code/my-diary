@@ -6,7 +6,7 @@ import {
   Smile, Edit3, X, Bot, Send,
   Leaf, Flower2, Droplets, Sun, Star,
   BookOpen, Download, FileText,
-  Search, Mic, Camera, ChevronRight, ChevronDown, ShieldAlert, KeyRound
+  Search, Mic, Camera, ChevronRight, ChevronDown, ShieldAlert, KeyRound, Check
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
@@ -15,7 +15,7 @@ import {
   addDoc, deleteDoc, getDoc 
 } from 'firebase/firestore';
 
-// --- THEME DEFINITIONS (已加深颜色，更明显鲜艳) ---
+// --- THEME DEFINITIONS ---
 const THEMES = {
   blue: { bg: 'bg-blue-200/80', primary: 'bg-blue-600', text: 'text-blue-800', light: 'bg-blue-300', border: 'border-blue-400', gradient: 'from-blue-400 to-blue-200', Decor: Droplets },
   pink: { bg: 'bg-pink-200/80', primary: 'bg-pink-600', text: 'text-pink-800', light: 'bg-pink-300', border: 'border-pink-400', gradient: 'from-pink-400 to-pink-200', Decor: Flower2 },
@@ -67,29 +67,24 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [roomNumber, setRoomNumber] = useState('');
   
-  // 新的 Auth 状态管理: 'room_input', 'setup', 'verify', 'main'
   const [authStep, setAuthStep] = useState('room_input'); 
   const [roomConfig, setRoomConfig] = useState(null);
   
   const [activeTab, setActiveTab] = useState('home');
   const [theme, setTheme] = useState('blue');
   
-  // Loading and Setup states
   const [isLoading, setIsLoading] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
 
-  // Auth Inputs
   const [inputName, setInputName] = useState('');
-  const [inputQ1, setInputQ1] = useState(''); // Cartoon
-  const [inputQ2, setInputQ2] = useState(''); // Food
+  const [inputQ1, setInputQ1] = useState(''); 
+  const [inputQ2, setInputQ2] = useState(''); 
   const [authError, setAuthError] = useState('');
 
-  // User details for App
   const [userName, setUserName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
 
-  // Data States
   const [events, setEvents] = useState([]);
   const [finances, setFinances] = useState([]);
   const [timetableImg, setTimetableImg] = useState(null);
@@ -98,7 +93,6 @@ export default function App() {
   const [chats, setChats] = useState([]);
   const [words, setWords] = useState([]); 
 
-  // 1. Initialize Auth
   useEffect(() => {
     if (!auth) return;
     const initAuth = async () => {
@@ -113,7 +107,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Data ONLY after successfully entering 'main'
   useEffect(() => {
     if (!user || authStep !== 'main' || !roomNumber) return;
 
@@ -149,7 +142,6 @@ export default function App() {
     };
   }, [user, authStep, roomNumber]);
 
-  // Firebase Helpers
   const addRecord = async (colName, data) => {
     const colRef = collection(db, 'artifacts', appId, 'public', 'data', `room_${roomNumber}_${colName}`);
     await addDoc(colRef, data);
@@ -158,12 +150,15 @@ export default function App() {
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomNumber}_${colName}`, id);
     await deleteDoc(docRef);
   };
+  const updateRecord = async (colName, id, data) => {
+    const docRef = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomNumber}_${colName}`, id);
+    await setDoc(docRef, data, { merge: true });
+  };
   const updateSettings = async (data) => {
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomNumber}_settings`, 'config');
     await setDoc(docRef, data, { merge: true });
   };
 
-  // --- NEW SECURITY LOGIC ---
   const handleRoomCheck = async (e) => {
     e.preventDefault();
     if (!roomNumber.trim()) return;
@@ -174,21 +169,17 @@ export default function App() {
       const snap = await getDoc(docRef);
       
       if (snap.exists() && snap.data().userName) {
-        // 房间已存在，检查设备记忆
         const configData = snap.data();
         setRoomConfig(configData);
         if (configData.theme) setTheme(configData.theme);
 
         const isRemembered = localStorage.getItem(`diary_auth_${roomNumber}`);
         if (isRemembered === 'true') {
-          // 在固定的设备上，无需再答题
           setAuthStep('main');
         } else {
-          // 换设备了，需要安全验证
           setAuthStep('verify');
         }
       } else {
-        // 全新的房间，去设置密保
         setAuthStep('setup');
       }
     } catch (err) {
@@ -207,7 +198,7 @@ export default function App() {
       q2: inputQ2.trim(),
       theme: 'blue'
     });
-    localStorage.setItem(`diary_auth_${roomNumber}`, 'true'); // 记录当前设备为受信任
+    localStorage.setItem(`diary_auth_${roomNumber}`, 'true'); 
     setAuthStep('main');
     setIsLoading(false);
   };
@@ -218,14 +209,12 @@ export default function App() {
     
     if (!inputName.trim()) return;
     
-    // 1. 名字必须对
     const isNameCorrect = inputName.trim() === roomConfig.userName;
     if (!isNameCorrect) {
       setAuthError('名字不对哦，是不是进错房间啦？');
       return;
     }
 
-    // 处理以前没有设置过密保的老用户
     if (!roomConfig.q1 && !roomConfig.q2) {
       if (!inputQ1.trim() || !inputQ2.trim()) {
         setAuthError('这是你第一次用新版安全系统，请填写两个问题作为以后的密保！');
@@ -239,7 +228,6 @@ export default function App() {
       return;
     }
 
-    // 2. 两个问题答对任意一个即可
     const isQ1Correct = inputQ1.trim() === roomConfig.q1;
     const isQ2Correct = inputQ2.trim() === roomConfig.q2;
 
@@ -251,14 +239,11 @@ export default function App() {
        return;
     }
 
-    // 验证成功
     localStorage.setItem(`diary_auth_${roomNumber}`, 'true');
     setAuthStep('main');
   };
 
   const handleLogout = () => {
-    // 退出时不清除 localStorage，下次来输入正确房号还能秒进
-    // 除非你想完全清空设备记忆，可以加上 localStorage.removeItem(...)
     setRoomNumber('');
     setInputName('');
     setInputQ1('');
@@ -277,9 +262,6 @@ export default function App() {
   const currentTheme = THEMES[theme] || THEMES.blue;
   const DecorIcon = currentTheme.Decor;
 
-  // ---------------------------------------------
-  // SCREEN 1: LOGIN (ENTER ROOM)
-  // ---------------------------------------------
   if (authStep === 'room_input') {
     return (
       <div className="flex justify-center bg-gray-100 min-h-screen items-center p-4 font-sans">
@@ -318,9 +300,6 @@ export default function App() {
     );
   }
 
-  // ---------------------------------------------
-  // SCREEN 2: FIRST TIME SETUP
-  // ---------------------------------------------
   if (authStep === 'setup') {
     return (
       <div className={`flex justify-center bg-gray-100 min-h-screen font-sans`}>
@@ -378,9 +357,6 @@ export default function App() {
     );
   }
 
-  // ---------------------------------------------
-  // SCREEN 3: VERIFY DEVICE
-  // ---------------------------------------------
   if (authStep === 'verify') {
     return (
       <div className={`flex justify-center bg-gray-100 min-h-screen font-sans`}>
@@ -461,24 +437,19 @@ export default function App() {
     <div className={`flex justify-center bg-gray-100 min-h-screen`}>
       <style>{floatingStyles}</style>
       
-      {/* Mobile Container */}
       <div className={`w-full max-w-md ${currentTheme.bg} min-h-screen shadow-2xl relative flex flex-col text-zinc-900 font-sans transition-colors duration-500 overflow-hidden`}>
         
-        {/* Animated Background Gradients */}
         <div className={`absolute top-10 right-0 w-64 h-64 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-1 bg-gradient-to-br ${currentTheme.gradient}`}></div>
         <div className={`absolute bottom-20 left-0 w-56 h-56 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-2 bg-gradient-to-tr ${currentTheme.gradient}`}></div>
 
-        {/* --- DYNAMIC BACKGROUND PATTERN (加深透明度 opacity-15) --- */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <DecorIcon className={`absolute top-[10%] -left-10 w-48 h-48 opacity-15 ${currentTheme.text} rotate-12 animate-float-2`} />
           <DecorIcon className={`absolute top-[40%] -right-16 w-64 h-64 opacity-15 ${currentTheme.text} -rotate-12 animate-float-1`} />
           <DecorIcon className={`absolute -bottom-5 left-[15%] w-40 h-40 opacity-15 ${currentTheme.text} rotate-45 animate-float-2`} />
         </div>
 
-        {/* Main Scrollable Content */}
         <div className="flex-1 overflow-y-auto pb-28 px-5 pt-12 no-scrollbar relative z-10">
           
-          {/* Header */}
           <header className="mb-8 flex justify-between items-start">
             <div className="flex-1 relative z-20">
               {isEditingName ? (
@@ -519,7 +490,6 @@ export default function App() {
                 >
                   <Palette className="w-5 h-5 text-zinc-600" />
                 </button>
-                {/* Theme Dropdown */}
                 {showPalette && (
                   <div className="absolute right-0 top-full mt-2 bg-white/95 backdrop-blur-xl p-3 rounded-2xl shadow-xl border border-white flex gap-2 animate-in fade-in slide-in-from-top-2">
                     {Object.keys(THEMES).map(t => (
@@ -538,7 +508,6 @@ export default function App() {
             </div>
           </header>
 
-          {/* Tab Contents */}
           {activeTab === 'home' && (
             <HomeTab 
               themeObj={currentTheme}
@@ -552,6 +521,7 @@ export default function App() {
               themeObj={currentTheme}
               events={events} 
               onAddEvent={(data) => addRecord('events', data)} 
+              onUpdateEvent={(id, data) => updateRecord('events', id, data)}
               onDelete={(id) => deleteRecord('events', id)}
             />
           )}
@@ -559,6 +529,7 @@ export default function App() {
             <FinanceTab 
               themeObj={currentTheme}
               finances={finances} 
+              onUpdateFinance={(id, data) => updateRecord('finances', id, data)}
               onDelete={(id) => deleteRecord('finances', id)}
             />
           )}
@@ -580,6 +551,7 @@ export default function App() {
               diaries={diaries}
               chats={chats}
               onAddDiary={(data) => addRecord('diaries', data)}
+              onUpdateDiary={(id, data) => updateRecord('diaries', id, data)}
               onDeleteDiary={(id) => deleteRecord('diaries', id)}
               onAddChat={(data) => addRecord('chats', data)}
             />
@@ -588,12 +560,12 @@ export default function App() {
             <WordsTab 
               themeObj={currentTheme}
               words={words}
+              onUpdateWord={(id, data) => updateRecord('words', id, data)}
               onDelete={(id) => deleteRecord('words', id)}
             />
           )}
         </div>
 
-        {/* Bottom Navigation */}
         <nav className="absolute bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-white/50 pt-2 px-2 pb-2 flex flex-col z-40 rounded-t-[2rem]">
           <div className="flex justify-between items-center w-full">
             <NavItem icon={<Home size={20} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
@@ -603,7 +575,6 @@ export default function App() {
             <NavItem icon={<ImageIcon size={20} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
             <NavItem icon={<Smile size={20} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
           </div>
-          {/* 隐藏的房号 */}
           <p className="text-center text-[8px] text-zinc-500/50 mt-1 font-light tracking-widest pointer-events-none flex items-center justify-center gap-1">
             This app is made by Suelane 12/5/2026. <span className="opacity-20">|</span> <span className="opacity-30 tracking-normal">Room: {roomNumber}</span>
           </p>
@@ -859,13 +830,21 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
 }
 
 // --- EVENTS TAB ---
-function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
+function EventsTab({ themeObj, events, onAddEvent, onUpdateEvent, onDelete }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
   const [pic, setPic] = useState('');
   const [picType, setPicType] = useState('Teacher'); 
+
+  // Edit states
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editPic, setEditPic] = useState('');
+  const [editPicType, setEditPicType] = useState('Teacher');
 
   const picTypes = [{ id: 'Teacher', label: '老师' }, { id: 'Club', label: '团体' }, { id: 'Classmate', label: '同学' }];
 
@@ -875,6 +854,27 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
     onAddEvent({ title, date, location, pic, picType });
     setTitle(''); setDate(''); setLocation(''); setPic('');
     setShowForm(false);
+  };
+
+  const startEdit = (event) => {
+    setEditingId(event.id);
+    setEditTitle(event.title);
+    setEditDate(event.date);
+    setEditLocation(event.location || '');
+    setEditPic(event.pic || '');
+    setEditPicType(event.picType || 'Teacher');
+  };
+
+  const handleSaveEdit = (id) => {
+    if (!editTitle || !editDate) return;
+    onUpdateEvent(id, {
+      title: editTitle,
+      date: editDate,
+      location: editLocation,
+      pic: editPic,
+      picType: editPicType
+    });
+    setEditingId(null);
   };
 
   const sortedEvents = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -928,13 +928,35 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
         {sortedEvents.map(event => {
           const daysLeft = getDaysLeft(event.date);
           const isPast = daysLeft < 0;
+          const isEditing = editingId === event.id;
+
+          if (isEditing) {
+            return (
+              <div key={event.id} className="bg-white/90 backdrop-blur-md rounded-3xl p-5 border border-white shadow-md animate-in fade-in">
+                 <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm mb-3 focus:outline-none" placeholder="活动名称" required />
+                 <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm mb-3 focus:outline-none" required />
+                 <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm mb-3 focus:outline-none" placeholder="活动地点" />
+                 <div className="flex space-x-2 mb-3 overflow-x-auto no-scrollbar">
+                  {picTypes.map(t => (
+                    <button key={t.id} type="button" onClick={() => setEditPicType(t.id)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${editPicType === t.id ? `${themeObj.primary} text-white` : 'bg-white border border-zinc-200 text-zinc-500'}`}>{t.label}</button>
+                  ))}
+                 </div>
+                 <input type="text" value={editPic} onChange={(e) => setEditPic(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-sm mb-4 focus:outline-none" placeholder="负责人/团体名称" />
+                 <div className="flex justify-end gap-2">
+                   <button onClick={() => setEditingId(null)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-sm font-medium">取消</button>
+                   <button onClick={() => handleSaveEdit(event.id)} className={`px-4 py-2 ${themeObj.primary} text-white rounded-xl text-sm font-medium shadow-sm flex items-center`}><Check className="w-4 h-4 mr-1"/> 保存</button>
+                 </div>
+              </div>
+            );
+          }
+
           return (
             <div key={event.id} className={`bg-white/80 backdrop-blur-md rounded-3xl p-5 border border-white shadow-sm flex items-start transition-opacity relative group ${isPast ? 'opacity-60' : ''}`}>
               <div className={`${themeObj.light} rounded-2xl p-3 min-w-[70px] text-center mr-4 border border-white/50`}>
                 <p className={`text-xs ${themeObj.text} uppercase font-semibold`}>{new Date(event.date).toLocaleString('zh-cn', { month: 'short' })}</p>
                 <p className={`text-xl font-medium ${themeObj.text}`}>{new Date(event.date).getDate()}</p>
               </div>
-              <div className="flex-1 pr-6">
+              <div className="flex-1 pr-14">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-medium text-lg text-zinc-900">{event.title}</h3>
                   {!isPast ? (
@@ -952,9 +974,14 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
                   </p>
                 )}
               </div>
-              <button onClick={() => onDelete(event.id)} className="absolute top-4 right-4 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100">
-                <Trash2 className="w-4 h-4"/>
-              </button>
+              <div className="absolute top-4 right-4 flex flex-col gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => startEdit(event)} className="text-zinc-500 bg-zinc-50 p-1.5 rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-200/50">
+                  <Edit3 className="w-4 h-4"/>
+                </button>
+                <button onClick={() => onDelete(event.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100 border border-red-100/50">
+                  <Trash2 className="w-4 h-4"/>
+                </button>
+              </div>
             </div>
           )
         })}
@@ -964,7 +991,15 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
 }
 
 // --- FINANCE TAB ---
-function FinanceTab({ themeObj, finances, onDelete }) {
+function FinanceTab({ themeObj, finances, onUpdateFinance, onDelete }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editType, setEditType] = useState('expense');
+
+  const expenseCategories = ['饮食', '交通', '学习用品', '娱乐', '其他'];
+  const incomeCategories = ['零用钱', '红包', '兼职/奖金', '其他'];
+
   const totalIncome = finances.filter(f => f.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = finances.filter(f => f.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const balance = totalIncome - totalExpense;
@@ -982,6 +1017,23 @@ function FinanceTab({ themeObj, finances, onDelete }) {
     '学习用品': '#34d399', 
     '娱乐': '#a78bfa', 
     '其他': '#f472b6' 
+  };
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditAmount(item.amount.toString());
+    setEditCategory(item.category);
+    setEditType(item.type);
+  };
+
+  const handleSaveEdit = (id) => {
+    if (!editAmount || !editCategory) return;
+    onUpdateFinance(id, {
+      amount: parseFloat(editAmount),
+      category: editCategory,
+      type: editType
+    });
+    setEditingId(null);
   };
 
   return (
@@ -1055,27 +1107,56 @@ function FinanceTab({ themeObj, finances, onDelete }) {
         <h3 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase mb-4">交易记录</h3>
         {sortedFinances.length > 0 ? (
           <div className="space-y-3">
-            {sortedFinances.map((item) => (
-              <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
-                <div className="flex items-center relative z-10">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 shadow-sm ${item.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
-                    {item.type === 'income' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+            {sortedFinances.map((item) => {
+              if (editingId === item.id) {
+                const categories = editType === 'expense' ? expenseCategories : incomeCategories;
+                return (
+                  <div key={item.id} className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-zinc-200 shadow-md flex flex-col gap-3 animate-in fade-in">
+                    <div className="flex bg-zinc-100/80 rounded-lg p-1">
+                      <button onClick={() => {setEditType('expense'); setEditCategory(expenseCategories[0]);}} className={`flex-1 py-1.5 text-xs font-medium rounded-md ${editType === 'expense' ? 'bg-white shadow-sm' : 'text-zinc-500'}`}>支出</button>
+                      <button onClick={() => {setEditType('income'); setEditCategory(incomeCategories[0]);}} className={`flex-1 py-1.5 text-xs font-medium rounded-md ${editType === 'income' ? 'bg-white shadow-sm' : 'text-zinc-500'}`}>收入</button>
+                    </div>
+                    <input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-lg p-2.5 text-sm" placeholder="金额 RM" />
+                    <div className="flex overflow-x-auto space-x-2 pb-1 no-scrollbar">
+                      {categories.map(cat => (
+                        <button key={cat} onClick={() => setEditCategory(cat)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium ${editCategory === cat ? `${themeObj.primary} text-white` : 'bg-zinc-50 border border-zinc-200 text-zinc-600'}`}>{cat}</button>
+                      ))}
+                    </div>
+                    <div className="flex justify-end gap-2 mt-1">
+                      <button onClick={() => setEditingId(null)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-medium">取消</button>
+                      <button onClick={() => handleSaveEdit(item.id)} className={`px-4 py-2 ${themeObj.primary} text-white rounded-xl text-xs font-medium shadow-sm`}><Check className="w-3.5 h-3.5 inline mr-1"/>保存</button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-zinc-900">{item.category}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">{new Date(item.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
+                );
+              }
+
+              return (
+                <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
+                  <div className="flex items-center relative z-10">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 shadow-sm ${item.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                      {item.type === 'income' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="font-medium text-zinc-900">{item.category}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{new Date(item.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 relative z-10 pr-12">
+                    <div className={`font-medium ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      {item.type === 'income' ? '+' : '-'}RM {item.amount.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="absolute right-3 flex flex-col gap-1.5 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => startEdit(item)} className="text-zinc-500 bg-zinc-50 p-1.5 rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-200/50">
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100 border border-red-100/50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 relative z-10">
-                  <div className={`font-medium ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                    {item.type === 'income' ? '+' : '-'}RM {item.amount.toFixed(2)}
-                  </div>
-                  <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100">
-                     <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
            <div className="text-center py-10 text-zinc-500">暂无财务记录，去首页记一笔吧</div>
@@ -1133,8 +1214,9 @@ function TimetableTab({ themeObj, timetableImg, setTimetableImg, remark, onUpdat
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl border border-white shadow-sm overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-md p-2 rounded-3xl border border-white shadow-sm overflow-hidden relative group">
             <img src={timetableImg} alt="Timetable" className="w-full rounded-2xl object-contain bg-white max-h-[60vh]" />
+            <button onClick={() => setTimetableImg(null)} className="absolute top-2 right-2 bg-red-500/80 text-white p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
           </div>
           
           <div className="bg-white/80 backdrop-blur-md p-5 rounded-3xl border border-white shadow-sm">
@@ -1163,17 +1245,20 @@ function TimetableTab({ themeObj, timetableImg, setTimetableImg, remark, onUpdat
 }
 
 // --- TREE HOLE TAB ---
-function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAddChat }) {
-  const [mode, setMode] = useState('diary'); // 'diary' or 'chat'
+function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onUpdateDiary, onDeleteDiary, onAddChat }) {
+  const [mode, setMode] = useState('diary'); 
   
-  // Diary States
   const [diaryContent, setDiaryContent] = useState('');
   const [diaryImage, setDiaryImage] = useState(null);
   const [selectedEmoji, setSelectedEmoji] = useState('😀');
   const [expandedId, setExpandedId] = useState(null); 
   const emojis = ['😀', '🥰', '😂', '🥺', '😡', '😴', '✨', '🌧️', '💪'];
 
-  // Chat States
+  // Edit States for Diary
+  const [editingId, setEditingId] = useState(null);
+  const [editDiaryContent, setEditDiaryContent] = useState('');
+  const [editDiaryEmoji, setEditDiaryEmoji] = useState('😀');
+
   const [chatInput, setChatInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const chatEndRef = useRef(null);
@@ -1211,6 +1296,21 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     });
     setDiaryContent('');
     setDiaryImage(null); 
+  };
+
+  const startEditDiary = (diary) => {
+    setEditingId(diary.id);
+    setEditDiaryContent(diary.content);
+    setEditDiaryEmoji(diary.emoji);
+  };
+
+  const saveEditDiary = (id, oldDiary) => {
+    onUpdateDiary(id, {
+      ...oldDiary, // 保留原来的图片和时间
+      content: editDiaryContent,
+      emoji: editDiaryEmoji
+    });
+    setEditingId(null);
   };
 
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
@@ -1363,7 +1463,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
               className="w-full bg-white/70 border border-zinc-200 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-zinc-400 min-h-[120px] resize-none mb-3 text-sm shadow-inner"
             />
             
-            {/* 照片预览区 */}
             {diaryImage && (
               <div className="relative mb-3 animate-in fade-in">
                  <img src={diaryImage} alt="Diary attached" className="w-full h-32 object-cover rounded-xl border border-zinc-200" />
@@ -1395,6 +1494,25 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
               <h4 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-3 px-2">历史回忆</h4>
               {sortedDiaries.map(diary => {
                 const isExpanded = expandedId === diary.id;
+                const isEditing = editingId === diary.id;
+
+                if (isEditing) {
+                  return (
+                    <div key={diary.id} className="bg-white/90 backdrop-blur-md rounded-2xl border border-white shadow-md p-4 animate-in fade-in">
+                      <div className="flex overflow-x-auto space-x-2 pb-3 no-scrollbar">
+                        {emojis.map(e => (
+                          <button key={e} type="button" onClick={() => setEditDiaryEmoji(e)} className={`text-xl p-1.5 rounded-xl transition-all flex-shrink-0 ${editDiaryEmoji === e ? 'bg-zinc-100 shadow-sm border border-zinc-200' : 'grayscale opacity-50'}`}>{e}</button>
+                        ))}
+                      </div>
+                      <textarea value={editDiaryContent} onChange={(e) => setEditDiaryContent(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-xl p-3 focus:outline-none min-h-[80px] resize-none mb-3 text-sm shadow-inner" />
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setEditingId(null)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-medium">取消</button>
+                        <button onClick={() => saveEditDiary(diary.id, diary)} className={`px-4 py-2 ${themeObj.primary} text-white rounded-xl text-xs font-medium shadow-sm`}><Check className="w-3.5 h-3.5 inline mr-1"/>保存</button>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={diary.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm overflow-hidden transition-all duration-300">
                     <div 
@@ -1423,9 +1541,12 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
                         )}
                         {diary.content && <p className="text-zinc-700 text-[13px] whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-xl border border-zinc-100 shadow-inner">{diary.content}</p>}
                         
-                        <div className="flex justify-end mt-4">
+                        <div className="flex justify-end gap-2 mt-4">
+                          <button onClick={() => startEditDiary(diary)} className="text-zinc-500 bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
+                            <Edit3 className="w-3 h-3 mr-1"/> 编辑
+                          </button>
                           <button onClick={() => onDeleteDiary(diary.id)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
-                            <Trash2 className="w-3 h-3 mr-1"/> 删除记录
+                            <Trash2 className="w-3 h-3 mr-1"/> 删除
                           </button>
                         </div>
                       </div>
@@ -1502,11 +1623,16 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
 }
 
 // --- WORDS TAB ---
-function WordsTab({ themeObj, words, onDelete }) {
+function WordsTab({ themeObj, words, onUpdateWord, onDelete }) {
   const [filter, setFilter] = useState('全部');
   const [searchQuery, setSearchQuery] = useState(''); 
   const [isListening, setIsListening] = useState(false); 
   const categories = ['全部', '华文', '国文', '英文', '其他'];
+
+  const [editingId, setEditingId] = useState(null);
+  const [editWord, setEditWord] = useState('');
+  const [editMeaning, setEditMeaning] = useState('');
+  const [editCategory, setEditCategory] = useState('');
 
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1524,6 +1650,23 @@ function WordsTab({ themeObj, words, onDelete }) {
     } else {
       alert("当前的浏览器可能不支持语音识别，请直接使用键盘打字，或者用手机输入法自带的语音键哦~");
     }
+  };
+
+  const startEdit = (w) => {
+    setEditingId(w.id);
+    setEditWord(w.word);
+    setEditMeaning(w.meaning);
+    setEditCategory(w.category);
+  };
+
+  const handleSaveEdit = (id) => {
+    if (!editWord || !editMeaning) return;
+    onUpdateWord(id, {
+      word: editWord,
+      meaning: editMeaning,
+      category: editCategory
+    });
+    setEditingId(null);
   };
 
   const filteredWords = words.filter(w => {
@@ -1612,26 +1755,51 @@ function WordsTab({ themeObj, words, onDelete }) {
 
       <div className="space-y-3">
         {sortedWords.length > 0 ? (
-          sortedWords.map(w => (
-            <div key={w.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
-              <div className="flex items-center">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-zinc-50 text-zinc-500 border border-zinc-200 shadow-inner`}>
-                  <FileText className="w-5 h-5" />
+          sortedWords.map(w => {
+            if (editingId === w.id) {
+              return (
+                <div key={w.id} className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-zinc-200 shadow-md flex flex-col gap-3 animate-in fade-in">
+                   <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
+                     {categories.filter(c => c !== '全部').map(cat => (
+                        <button key={cat} onClick={() => setEditCategory(cat)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${editCategory === cat ? `${themeObj.primary} text-white` : 'bg-zinc-50 border border-zinc-200 text-zinc-500'}`}>{cat}</button>
+                     ))}
+                   </div>
+                   <input type="text" value={editWord} onChange={(e) => setEditWord(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-lg p-2.5 text-sm focus:outline-none" placeholder="生字" />
+                   <input type="text" value={editMeaning} onChange={(e) => setEditMeaning(e.target.value)} className="w-full bg-white border border-zinc-200 rounded-lg p-2.5 text-sm focus:outline-none" placeholder="意思" />
+                   <div className="flex justify-end gap-2 mt-1">
+                      <button onClick={() => setEditingId(null)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-medium">取消</button>
+                      <button onClick={() => handleSaveEdit(w.id)} className={`px-4 py-2 ${themeObj.primary} text-white rounded-xl text-xs font-medium shadow-sm`}><Check className="w-3.5 h-3.5 inline mr-1"/>保存</button>
+                   </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-zinc-900 text-lg leading-tight">{w.word}</p>
-                  <p className="text-sm text-zinc-600 mt-1">{w.meaning}</p>
-                  <p className="text-[10px] text-zinc-500 mt-1.5 flex items-center gap-2">
-                    <span className="bg-zinc-200/60 px-1.5 py-0.5 rounded text-zinc-700 font-medium border border-zinc-200/80">{w.category}</span>
-                    {new Date(w.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
-                  </p>
+              );
+            }
+
+            return (
+              <div key={w.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
+                <div className="flex items-center">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-zinc-50 text-zinc-500 border border-zinc-200 shadow-inner`}>
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-zinc-900 text-lg leading-tight">{w.word}</p>
+                    <p className="text-sm text-zinc-600 mt-1">{w.meaning}</p>
+                    <p className="text-[10px] text-zinc-500 mt-1.5 flex items-center gap-2">
+                      <span className="bg-zinc-200/60 px-1.5 py-0.5 rounded text-zinc-700 font-medium border border-zinc-200/80">{w.category}</span>
+                      {new Date(w.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+                <div className="absolute right-3 flex flex-col gap-1.5 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEdit(w)} className="text-zinc-500 bg-zinc-50 p-1.5 rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-200/50">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => onDelete(w.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity self-start hover:bg-red-100 border border-red-100/50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <button onClick={() => onDelete(w.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity self-start hover:bg-red-100">
-                  <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-12 text-zinc-500 bg-white/60 rounded-3xl border border-dashed border-zinc-400">
             <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-30" />
