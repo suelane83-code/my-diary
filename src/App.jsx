@@ -15,13 +15,13 @@ import {
   addDoc, deleteDoc 
 } from 'firebase/firestore';
 
-// --- THEME DEFINITIONS ---
+// --- THEME DEFINITIONS (已加深颜色) ---
 const THEMES = {
-  blue: { bg: 'bg-blue-50/50', primary: 'bg-blue-500', text: 'text-blue-500', light: 'bg-blue-100', border: 'border-blue-200', gradient: 'from-blue-200 to-blue-50', Decor: Droplets },
-  pink: { bg: 'bg-pink-50/50', primary: 'bg-pink-500', text: 'text-pink-500', light: 'bg-pink-100', border: 'border-pink-200', gradient: 'from-pink-200 to-pink-50', Decor: Flower2 },
-  yellow: { bg: 'bg-yellow-50/50', primary: 'bg-yellow-500', text: 'text-yellow-600', light: 'bg-yellow-100', border: 'border-yellow-200', gradient: 'from-yellow-200 to-yellow-50', Decor: Sun },
-  green: { bg: 'bg-emerald-50/50', primary: 'bg-emerald-500', text: 'text-emerald-500', light: 'bg-emerald-100', border: 'border-emerald-200', gradient: 'from-emerald-200 to-emerald-50', Decor: Leaf },
-  purple: { bg: 'bg-purple-50/50', primary: 'bg-purple-500', text: 'text-purple-500', light: 'bg-purple-100', border: 'border-purple-200', gradient: 'from-purple-200 to-purple-50', Decor: Star },
+  blue: { bg: 'bg-blue-100/90', primary: 'bg-blue-600', text: 'text-blue-700', light: 'bg-blue-200', border: 'border-blue-300', gradient: 'from-blue-300 to-blue-100', Decor: Droplets },
+  pink: { bg: 'bg-pink-100/90', primary: 'bg-pink-600', text: 'text-pink-700', light: 'bg-pink-200', border: 'border-pink-300', gradient: 'from-pink-300 to-pink-100', Decor: Flower2 },
+  yellow: { bg: 'bg-amber-100/90', primary: 'bg-amber-500', text: 'text-amber-700', light: 'bg-amber-200', border: 'border-amber-300', gradient: 'from-amber-300 to-amber-100', Decor: Sun },
+  green: { bg: 'bg-emerald-100/90', primary: 'bg-emerald-600', text: 'text-emerald-700', light: 'bg-emerald-200', border: 'border-emerald-300', gradient: 'from-emerald-300 to-emerald-100', Decor: Leaf },
+  purple: { bg: 'bg-purple-100/90', primary: 'bg-purple-600', text: 'text-purple-700', light: 'bg-purple-200', border: 'border-purple-300', gradient: 'from-purple-300 to-purple-100', Decor: Star },
 };
 
 // --- FIREBASE INITIALIZATION ---
@@ -315,8 +315,8 @@ export default function App() {
                 </h1>
               )}
               {/* 移除了显眼的房号，只保留同步状态 */}
-              <p className="text-zinc-400 text-[11px] mt-1.5 font-light tracking-wide flex items-center gap-1.5 opacity-80">
-                <Leaf className="w-3 h-3 text-emerald-400" />
+              <p className="text-zinc-500 text-[11px] mt-1.5 font-light tracking-wide flex items-center gap-1.5 opacity-80">
+                <Leaf className="w-3 h-3 text-emerald-500" />
                 <span>{isLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : '云端已同步'}</span>
               </p>
             </div>
@@ -404,7 +404,7 @@ export default function App() {
         </div>
 
         {/* Bottom Navigation */}
-        <nav className="absolute bottom-0 w-full bg-white/70 backdrop-blur-xl border-t border-white/50 pt-2 px-2 pb-2 flex flex-col z-40 rounded-t-[2rem]">
+        <nav className="absolute bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-white/50 pt-2 px-2 pb-2 flex flex-col z-40 rounded-t-[2rem]">
           <div className="flex justify-between items-center w-full">
             <NavItem icon={<Home size={20} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
             <NavItem icon={<BookOpen size={20} />} label="生字" active={activeTab === 'words'} onClick={() => setActiveTab('words')} themeObj={currentTheme}/>
@@ -414,8 +414,8 @@ export default function App() {
             <NavItem icon={<Smile size={20} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
           </div>
           {/* 将房号藏在了最底部的这里，并且做了低透明度处理 */}
-          <p className="text-center text-[8px] text-zinc-400/40 mt-1 font-light tracking-widest pointer-events-none flex items-center justify-center gap-1">
-            This app is made by Suelane 12/5/2026. <span className="opacity-10">|</span> <span className="opacity-30 tracking-normal">Room: {roomNumber}</span>
+          <p className="text-center text-[8px] text-zinc-500/50 mt-1 font-light tracking-widest pointer-events-none flex items-center justify-center gap-1">
+            This app is made by Suelane 12/5/2026. <span className="opacity-20">|</span> <span className="opacity-40 tracking-normal">Room: {roomNumber}</span>
           </p>
         </nav>
       </div>
@@ -507,7 +507,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
           </h2>
         </div>
         {upcomingEvents.length > 0 ? (
-          <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-lg shadow-${themeObj.primary}/20 relative overflow-hidden transition-colors duration-500`}>
+          <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-lg shadow-${themeObj.primary}/30 relative overflow-hidden transition-colors duration-500`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
             
             <p className="text-white/80 text-sm mb-1">{upcomingEvents[0].date}</p>
@@ -528,7 +528,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
           </div>
         ) : (
           <div className="bg-white/60 backdrop-blur-sm border border-white rounded-3xl p-6 text-center shadow-sm">
-            <p className="text-zinc-400">近期没有活动安排</p>
+            <p className="text-zinc-500">近期没有活动安排</p>
           </div>
         )}
       </section>
@@ -539,7 +539,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
         </div>
         
         <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 shadow-sm border border-white">
-          <div className="flex bg-zinc-100/80 rounded-xl p-1 mb-6">
+          <div className="flex bg-zinc-100/80 rounded-xl p-1 mb-6 border border-zinc-200/50">
             <button
               onClick={() => setFinType('expense')}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${finType === 'expense' ? 'bg-white shadow-sm text-black' : 'text-zinc-500'}`}
@@ -563,7 +563,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-white/50 border border-zinc-100 text-xl text-black font-medium rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                className="w-full bg-white/70 border border-zinc-200 text-xl text-black font-medium rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
                 required
               />
             </div>
@@ -576,7 +576,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
                   className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     category === cat 
                       ? `${themeObj.primary} text-white shadow-md` 
-                      : 'bg-white/50 text-zinc-600 hover:bg-white'
+                      : 'bg-white/70 text-zinc-600 hover:bg-white border border-zinc-200/50'
                   }`}
                 >
                   {cat}
@@ -591,7 +591,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
                   ? 'bg-zinc-100 text-zinc-400' 
                   : showSuccess 
                     ? 'bg-green-500 text-white'
-                    : 'bg-zinc-900 text-white active:scale-[0.98]'
+                    : 'bg-zinc-900 text-white active:scale-[0.98] shadow-md'
               }`}
             >
               {showSuccess ? (
@@ -619,7 +619,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
                 className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   wordCategory === cat 
                     ? `${themeObj.primary} text-white shadow-md` 
-                    : 'bg-white/50 text-zinc-600 hover:bg-white'
+                    : 'bg-white/70 text-zinc-600 hover:bg-white border border-zinc-200/50'
                 }`}
               >
                 {cat}
@@ -633,7 +633,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
               placeholder="新学的生字/词语 (如: Apple)"
               value={word}
               onChange={(e) => setWord(e.target.value)}
-              className="w-full bg-white/50 border border-zinc-100 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
+              className="w-full bg-white/70 border border-zinc-200 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
               required
             />
             <input
@@ -641,7 +641,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
               placeholder="意思 (如: 苹果)"
               value={meaning}
               onChange={(e) => setMeaning(e.target.value)}
-              className="w-full bg-white/50 border border-zinc-100 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
+              className="w-full bg-white/70 border border-zinc-200 text-black rounded-2xl py-3.5 px-4 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm"
               required
             />
             <button
@@ -652,7 +652,7 @@ function HomeTab({ themeObj, events, onAddFinance, onAddWord }) {
                   ? 'bg-zinc-100 text-zinc-400' 
                   : showWordSuccess 
                     ? 'bg-green-500 text-white'
-                    : 'bg-zinc-900 text-white active:scale-[0.98]'
+                    : 'bg-zinc-900 text-white active:scale-[0.98] shadow-md'
               }`}
             >
               {showWordSuccess ? (
@@ -694,7 +694,7 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
       {!showForm ? (
         <button 
           onClick={() => setShowForm(true)}
-          className="w-full bg-white/60 backdrop-blur-sm border border-dashed border-zinc-300 text-zinc-500 rounded-3xl py-6 flex flex-col items-center justify-center hover:bg-white transition-all active:scale-[0.98]"
+          className="w-full bg-white/60 backdrop-blur-sm border border-dashed border-zinc-400 text-zinc-600 rounded-3xl py-6 flex flex-col items-center justify-center hover:bg-white transition-all active:scale-[0.98]"
         >
           <div className={`${themeObj.light} ${themeObj.text} p-3 rounded-full mb-3`}>
             <Plus className="w-6 h-6" />
@@ -703,32 +703,32 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
         </button>
       ) : (
         <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white animate-in slide-in-from-top-4">
-          <h2 className="text-lg font-medium mb-4">添加新活动</h2>
+          <h2 className="text-lg font-medium mb-4 text-zinc-800">添加新活动</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input type="text" placeholder="活动名称 (如: 运动会)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-white border border-zinc-100 rounded-xl p-4 focus:outline-none" required />
+            <input type="text" placeholder="活动名称 (如: 运动会)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-white/80 border border-zinc-200 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-zinc-300" required />
             <div className="relative">
               <Calendar className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-white border border-zinc-100 rounded-xl p-4 pl-10 focus:outline-none" required />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-white/80 border border-zinc-200 rounded-xl p-4 pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-300" required />
             </div>
             <div className="relative">
               <MapPin className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input type="text" placeholder="活动地点 (选填)" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white border border-zinc-100 rounded-xl p-4 pl-10 focus:outline-none" />
+              <input type="text" placeholder="活动地点 (选填)" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-white/80 border border-zinc-200 rounded-xl p-4 pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
             </div>
             <div className="pt-2">
               <p className="text-xs text-zinc-500 font-medium mb-2 uppercase tracking-wider">负责人/团体</p>
               <div className="flex space-x-2 mb-3">
                 {picTypes.map(t => (
-                  <button key={t.id} type="button" onClick={() => setPicType(t.id)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${picType === t.id ? `${themeObj.primary} text-white` : 'bg-white border border-zinc-100 text-zinc-500'}`}>{t.label}</button>
+                  <button key={t.id} type="button" onClick={() => setPicType(t.id)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${picType === t.id ? `${themeObj.primary} text-white shadow-sm` : 'bg-white border border-zinc-200 text-zinc-500'}`}>{t.label}</button>
                 ))}
               </div>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input type="text" placeholder="姓名或团体名称" value={pic} onChange={(e) => setPic(e.target.value)} className="w-full bg-white border border-zinc-100 rounded-xl p-4 pl-10 focus:outline-none" />
+                <input type="text" placeholder="姓名或团体名称" value={pic} onChange={(e) => setPic(e.target.value)} className="w-full bg-white/80 border border-zinc-200 rounded-xl p-4 pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-300" />
               </div>
             </div>
             <div className="flex space-x-3 pt-4">
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3.5 bg-zinc-100 text-zinc-600 rounded-xl font-medium">取消</button>
-              <button type="submit" className={`flex-1 py-3.5 ${themeObj.primary} text-white rounded-xl font-medium active:scale-95 transition-transform`}>添加</button>
+              <button type="submit" className={`flex-1 py-3.5 ${themeObj.primary} text-white rounded-xl font-medium active:scale-95 transition-transform shadow-md`}>添加</button>
             </div>
           </form>
         </div>
@@ -740,7 +740,7 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
           const isPast = daysLeft < 0;
           return (
             <div key={event.id} className={`bg-white/80 backdrop-blur-md rounded-3xl p-5 border border-white shadow-sm flex items-start transition-opacity relative group ${isPast ? 'opacity-60' : ''}`}>
-              <div className={`${themeObj.light} rounded-2xl p-3 min-w-[70px] text-center mr-4`}>
+              <div className={`${themeObj.light} rounded-2xl p-3 min-w-[70px] text-center mr-4 border border-white/50`}>
                 <p className={`text-xs ${themeObj.text} uppercase font-semibold`}>{new Date(event.date).toLocaleString('zh-cn', { month: 'short' })}</p>
                 <p className={`text-xl font-medium ${themeObj.text}`}>{new Date(event.date).getDate()}</p>
               </div>
@@ -750,19 +750,19 @@ function EventsTab({ themeObj, events, onAddEvent, onDelete }) {
                   {!isPast ? (
                     <span className={`text-xs font-semibold ${themeObj.primary} text-white px-2 py-1 rounded-md whitespace-nowrap shadow-sm`}>{daysLeft === 0 ? '今天' : `${daysLeft}天后`}</span>
                   ) : (
-                    <span className="text-xs font-semibold bg-zinc-200 text-zinc-500 px-2 py-1 rounded-md whitespace-nowrap">已结束</span>
+                    <span className="text-xs font-semibold bg-zinc-200 text-zinc-600 px-2 py-1 rounded-md whitespace-nowrap">已结束</span>
                   )}
                 </div>
                 {event.location && <p className="text-sm text-zinc-500 flex items-center mt-2"><MapPin className="w-3.5 h-3.5 mr-1.5" /> {event.location}</p>}
                 {event.pic && (
                   <p className="text-sm text-zinc-500 flex items-center mt-1">
                     <User className="w-3.5 h-3.5 mr-1.5" /> 
-                    <span className="text-xs bg-white border border-zinc-100 px-1.5 py-0.5 rounded text-zinc-600 mr-1.5 shadow-sm">{picTypes.find(t=>t.id===event.picType)?.label}</span>
+                    <span className="text-xs bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-600 mr-1.5 shadow-sm">{picTypes.find(t=>t.id===event.picType)?.label}</span>
                     {event.pic}
                   </p>
                 )}
               </div>
-              <button onClick={() => onDelete(event.id)} className="absolute top-4 right-4 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-full shadow-sm">
+              <button onClick={() => onDelete(event.id)} className="absolute top-4 right-4 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100">
                 <Trash2 className="w-4 h-4"/>
               </button>
             </div>
@@ -797,20 +797,20 @@ function FinanceTab({ themeObj, finances, onDelete }) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative z-10">
       <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden transition-colors duration-500`}>
-        <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full pointer-events-none blur-xl"></div>
-        <p className="text-white/80 text-sm mb-1">当前结余</p>
+        <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full pointer-events-none blur-xl"></div>
+        <p className="text-white/90 text-sm mb-1">当前结余</p>
         <h2 className="text-4xl font-medium mb-8 flex items-baseline drop-shadow-sm">
-          <span className="text-xl mr-1 text-white/80">RM</span>
+          <span className="text-xl mr-1 text-white/90">RM</span>
           {balance.toFixed(2)}
         </h2>
         <div className="flex gap-4">
-          <div className="flex-1 bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+          <div className="flex-1 bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 shadow-inner">
             <div className="flex items-center text-white/90 text-xs mb-1">
               <ArrowDownRight className="w-3 h-3 mr-1" /> 收入
             </div>
             <p className="font-medium">RM {totalIncome.toFixed(2)}</p>
           </div>
-          <div className="flex-1 bg-black/10 backdrop-blur-md rounded-2xl p-4 border border-black/5">
+          <div className="flex-1 bg-black/10 backdrop-blur-md rounded-2xl p-4 border border-black/10 shadow-inner">
             <div className="flex items-center text-white/90 text-xs mb-1">
               <ArrowUpRight className="w-3 h-3 mr-1" /> 支出
             </div>
@@ -846,15 +846,15 @@ function FinanceTab({ themeObj, finances, onDelete }) {
               })}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[10px] text-zinc-400 mb-0.5">总支出</span>
-              <span className="text-lg font-semibold text-zinc-700 leading-none">RM{totalExpense.toFixed(0)}</span>
+              <span className="text-[10px] text-zinc-500 mb-0.5">总支出</span>
+              <span className="text-lg font-semibold text-zinc-800 leading-none">RM{totalExpense.toFixed(0)}</span>
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2.5 w-full">
             {Object.entries(categoryTotals).map(([cat, amount]) => (
-              <div key={cat} className="flex items-center text-[11px] font-medium text-zinc-600 bg-white/60 px-2.5 py-1.5 rounded-xl shadow-sm border border-white">
+              <div key={cat} className="flex items-center text-[11px] font-medium text-zinc-700 bg-white/70 px-2.5 py-1.5 rounded-xl shadow-sm border border-white">
                 <span className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-inner" style={{ backgroundColor: expenseColors[cat] || '#cbd5e1' }}></span>
-                {cat} <span className="text-zinc-400 ml-1 font-normal">{(amount/totalExpense*100).toFixed(0)}%</span>
+                {cat} <span className="text-zinc-500 ml-1 font-normal">{(amount/totalExpense*100).toFixed(0)}%</span>
               </div>
             ))}
           </div>
@@ -868,19 +868,19 @@ function FinanceTab({ themeObj, finances, onDelete }) {
             {sortedFinances.map((item) => (
               <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
                 <div className="flex items-center relative z-10">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${item.type === 'income' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 shadow-sm ${item.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                     {item.type === 'income' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="font-medium text-zinc-900">{item.category}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">{new Date(item.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{new Date(item.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 relative z-10">
                   <div className={`font-medium ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                     {item.type === 'income' ? '+' : '-'}RM {item.amount.toFixed(2)}
                   </div>
-                  <button onClick={() => onDelete(item.id)} className="text-red-400 bg-white p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100">
                      <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -888,7 +888,7 @@ function FinanceTab({ themeObj, finances, onDelete }) {
             ))}
           </div>
         ) : (
-           <div className="text-center py-10 text-zinc-400">暂无财务记录，去首页记一笔吧</div>
+           <div className="text-center py-10 text-zinc-500">暂无财务记录，去首页记一笔吧</div>
         )}
       </div>
     </div>
@@ -931,7 +931,7 @@ function TimetableTab({ themeObj, timetableImg, setTimetableImg, remark, onUpdat
     <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col relative z-10">
       {!timetableImg ? (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh]">
-          <div className={`w-24 h-24 ${themeObj.light} ${themeObj.text} rounded-full flex items-center justify-center mb-6`}>
+          <div className={`w-24 h-24 ${themeObj.light} ${themeObj.text} rounded-full flex items-center justify-center mb-6 shadow-sm border border-white`}>
             <ImageIcon className="w-10 h-10" />
           </div>
           <h2 className="text-xl font-medium text-zinc-900 mb-2">暂无课程表</h2>
@@ -956,7 +956,7 @@ function TimetableTab({ themeObj, timetableImg, setTimetableImg, remark, onUpdat
               onChange={(e) => setLocalRemark(e.target.value)}
               onBlur={() => onUpdateRemark(localRemark)}
               placeholder="在这里写下你的上课备注或提醒..."
-              className="w-full bg-white/50 border border-zinc-100 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-black text-sm min-h-[100px] resize-none transition-all shadow-inner"
+              className="w-full bg-white/70 border border-zinc-200 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm min-h-[100px] resize-none transition-all shadow-inner"
             />
           </div>
 
@@ -978,9 +978,9 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   
   // Diary States
   const [diaryContent, setDiaryContent] = useState('');
-  const [diaryImage, setDiaryImage] = useState(null); // 新增：保存日记照片
+  const [diaryImage, setDiaryImage] = useState(null);
   const [selectedEmoji, setSelectedEmoji] = useState('😀');
-  const [expandedId, setExpandedId] = useState(null); // 新增：用于折叠/展开历史记录
+  const [expandedId, setExpandedId] = useState(null); 
   const emojis = ['😀', '🥰', '😂', '🥺', '😡', '😴', '✨', '🌧️', '💪'];
 
   // Chat States
@@ -988,7 +988,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   const [isThinking, setIsThinking] = useState(false);
   const chatEndRef = useRef(null);
 
-  // 处理照片上传
   const handleDiaryImageUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -997,7 +996,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800; // 压缩图片以节省数据库空间
+          const MAX_WIDTH = 800; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
@@ -1013,18 +1012,18 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
 
   const handleDiarySubmit = (e) => {
     e.preventDefault();
-    if (!diaryContent.trim() && !diaryImage) return; // 没写字也没发照片就不让保存
+    if (!diaryContent.trim() && !diaryImage) return; 
     onAddDiary({
       emoji: selectedEmoji,
       content: diaryContent,
-      image: diaryImage, // 把照片存进数据库
+      image: diaryImage, 
       date: new Date().toISOString()
     });
     setDiaryContent('');
-    setDiaryImage(null); // 清空照片预览
+    setDiaryImage(null); 
   };
 
-  const callGeminiWithRetry = async (prompt, retries = 3) => {
+  const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
     const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
 
@@ -1036,9 +1035,34 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // 构建带有历史记录的请求，并确保角色（user / model）严格交替，这是避免 400 Bad Request 错误的黄金法则！
+    const contents = [];
+    let lastRole = null;
+    
+    const recentHistory = history.slice(-10); // 取最近的 10 条历史以防过长
+    for (const msg of recentHistory) {
+      const mappedRole = msg.role === 'ai' ? 'model' : 'user';
+      if (mappedRole !== lastRole) {
+        contents.push({ role: mappedRole, parts: [{ text: msg.text }] });
+        lastRole = mappedRole;
+      } else {
+        // 如果遇到连续相同角色的消息（比如连续两个 user），就把它们合并在一起发
+        if (contents.length > 0) {
+          contents[contents.length - 1].parts[0].text += `\n${msg.text}`;
+        }
+      }
+    }
+    
+    if (lastRole === 'user') {
+      contents[contents.length - 1].parts[0].text += `\n${prompt}`;
+    } else {
+      contents.push({ role: 'user', parts: [{ text: prompt }] });
+    }
+
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
+      contents: contents,
+      systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜，名叫树洞。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
     for (let i = 0; i < retries; i++) {
@@ -1076,7 +1100,8 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     await onAddChat(userMsgData);
     
     setIsThinking(true);
-    const reply = await callGeminiWithRetry(userText);
+    // 把目前的聊天记录传给 Gemini 大脑
+    const reply = await callGeminiWithRetry(userText, sortedChats);
     
     const aiMsgData = { role: 'ai', text: reply, timestamp: new Date().toISOString() };
     await onAddChat(aiMsgData);
@@ -1131,14 +1156,14 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
               value={diaryContent}
               onChange={(e) => setDiaryContent(e.target.value)}
               placeholder="今天发生了什么事？记录一下吧..."
-              className="w-full bg-white/50 border border-zinc-100 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-black min-h-[120px] resize-none mb-3 text-sm shadow-inner"
+              className="w-full bg-white/70 border border-zinc-200 rounded-xl p-4 focus:outline-none focus:ring-1 focus:ring-zinc-400 min-h-[120px] resize-none mb-3 text-sm shadow-inner"
             />
             
             {/* 照片预览区 */}
             {diaryImage && (
               <div className="relative mb-3 animate-in fade-in">
                  <img src={diaryImage} alt="Diary attached" className="w-full h-32 object-cover rounded-xl border border-zinc-200" />
-                 <button type="button" onClick={() => setDiaryImage(null)} className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors">
+                 <button type="button" onClick={() => setDiaryImage(null)} className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors shadow-sm">
                    <X className="w-4 h-4"/>
                  </button>
               </div>
@@ -1146,7 +1171,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
 
             <div className="flex gap-2">
               <input type="file" id="diary-img-upload" accept="image/*" onChange={handleDiaryImageUpload} className="hidden" />
-              <label htmlFor="diary-img-upload" className="py-4 px-4 bg-zinc-50 text-zinc-500 rounded-xl flex items-center justify-center cursor-pointer hover:bg-zinc-100 transition-colors shadow-sm">
+              <label htmlFor="diary-img-upload" className="py-4 px-4 bg-zinc-100 text-zinc-500 rounded-xl flex items-center justify-center cursor-pointer hover:bg-zinc-200 transition-colors shadow-sm border border-zinc-200">
                  <Camera className="w-5 h-5" />
               </label>
               <button 
@@ -1161,7 +1186,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
             </div>
           </form>
 
-          {/* 新增：历史回忆折叠列表 */}
           {sortedDiaries.length > 0 && (
             <div className="space-y-3 mt-8">
               <h4 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-3 px-2">历史回忆</h4>
@@ -1170,33 +1194,33 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
                 return (
                   <div key={diary.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm overflow-hidden transition-all duration-300">
                     <div 
-                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/50 transition-colors"
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/90 transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : diary.id)}
                     >
                       <div className="flex items-center gap-4">
                         <span className="text-2xl drop-shadow-sm">{diary.emoji}</span>
                         <div className="flex flex-col">
                           <span className="font-medium text-zinc-800 text-[15px]">{new Date(diary.date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</span>
-                          <span className="text-zinc-400 text-[10px]">{new Date(diary.date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-zinc-500 text-[10px]">{new Date(diary.date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {diary.image && <Camera className="w-3.5 h-3.5 text-zinc-300" />}
+                        {diary.image && <Camera className="w-3.5 h-3.5 text-zinc-400" />}
                         {isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-400" /> : <ChevronRight className="w-4 h-4 text-zinc-400" />}
                       </div>
                     </div>
                     
                     {isExpanded && (
-                      <div className="px-4 pb-4 pt-2 animate-in fade-in border-t border-zinc-100/50 mt-1">
+                      <div className="px-4 pb-4 pt-2 animate-in fade-in border-t border-zinc-100/80 mt-1">
                         {diary.image && (
-                          <div className="mb-4 rounded-xl overflow-hidden border border-zinc-100 shadow-sm">
+                          <div className="mb-4 rounded-xl overflow-hidden border border-zinc-200 shadow-sm">
                             <img src={diary.image} alt="Memory" className="w-full object-cover max-h-64" />
                           </div>
                         )}
-                        {diary.content && <p className="text-zinc-700 text-[13px] whitespace-pre-wrap leading-relaxed">{diary.content}</p>}
+                        {diary.content && <p className="text-zinc-700 text-[13px] whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-xl border border-zinc-100 shadow-inner">{diary.content}</p>}
                         
                         <div className="flex justify-end mt-4">
-                          <button onClick={() => onDeleteDiary(diary.id)} className="text-red-400 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
+                          <button onClick={() => onDeleteDiary(diary.id)} className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs flex items-center shadow-sm transition-colors">
                             <Trash2 className="w-3 h-3 mr-1"/> 删除记录
                           </button>
                         </div>
@@ -1218,13 +1242,13 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
             </div>
             <div>
               <h3 className="font-medium text-zinc-900">AI 树洞</h3>
-              <p className="text-xs text-zinc-500">永远在线倾听你的心事</p>
+              <p className="text-xs text-zinc-600">永远在线倾听你的心事</p>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-white/30">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-white/40 shadow-inner">
             {sortedChats.length === 0 && (
-              <div className="text-center text-zinc-400 text-sm mt-10">
+              <div className="text-center text-zinc-500 text-sm mt-10 bg-white/60 p-4 rounded-2xl border border-white inline-block mx-auto w-3/4">
                 跟我打个招呼吧！有什么烦恼都可以告诉我哦。
               </div>
             )}
@@ -1233,7 +1257,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
                 <div className={`max-w-[80%] rounded-2xl p-3.5 text-[0.9rem] leading-relaxed shadow-sm ${
                   chat.role === 'user' 
                     ? `${themeObj.primary} text-white rounded-tr-sm` 
-                    : 'bg-white border border-zinc-100 text-zinc-800 rounded-tl-sm'
+                    : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-sm'
                 }`}>
                   {chat.text}
                 </div>
@@ -1241,7 +1265,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
             ))}
             {isThinking && (
               <div className="flex justify-start">
-                <div className="bg-white border border-zinc-100 text-zinc-500 rounded-2xl rounded-tl-sm p-4 text-sm flex space-x-1.5 shadow-sm">
+                <div className="bg-white border border-zinc-200 text-zinc-500 rounded-2xl rounded-tl-sm p-4 text-sm flex space-x-1.5 shadow-sm">
                   <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce"></span>
                   <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
                   <span className="w-2 h-2 bg-zinc-300 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></span>
@@ -1257,7 +1281,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="发送消息给树洞..."
-              className="flex-1 bg-zinc-50 border border-zinc-100 shadow-inner rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-zinc-300 text-sm transition-all"
+              className="flex-1 bg-zinc-50 border border-zinc-200 shadow-inner rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm transition-all"
             />
             <button 
               type="submit" 
@@ -1276,16 +1300,15 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
 // --- WORDS TAB ---
 function WordsTab({ themeObj, words, onDelete }) {
   const [filter, setFilter] = useState('全部');
-  const [searchQuery, setSearchQuery] = useState(''); // 新增：搜索内容
-  const [isListening, setIsListening] = useState(false); // 新增：语音监听状态
+  const [searchQuery, setSearchQuery] = useState(''); 
+  const [isListening, setIsListening] = useState(false); 
   const categories = ['全部', '华文', '国文', '英文', '其他'];
 
-  // 新增：语音输入功能 (调用浏览器原生接口)
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'zh-CN'; // 默认设为中文，部分浏览器会自动识别中英混合
+      recognition.lang = 'zh-CN'; 
       recognition.onstart = () => setIsListening(true);
       recognition.onresult = (event) => {
         setSearchQuery(event.results[0][0].transcript);
@@ -1333,24 +1356,23 @@ function WordsTab({ themeObj, words, onDelete }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 relative z-10 pb-4">
       <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden transition-colors duration-500 flex justify-between items-center`}>
-        <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full pointer-events-none blur-xl"></div>
+        <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full pointer-events-none blur-xl"></div>
         <div>
-          <p className="text-white/80 text-sm mb-1">我的词汇</p>
+          <p className="text-white/90 text-sm mb-1">我的词汇</p>
           <h2 className="text-3xl font-medium drop-shadow-sm flex items-baseline">
-            {words.length} <span className="text-sm ml-1 text-white/80 font-normal">个词汇</span>
+            {words.length} <span className="text-sm ml-1 text-white/90 font-normal">个词汇</span>
           </h2>
         </div>
         <button 
           onClick={exportToCSV}
           disabled={words.length === 0}
-          className="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors p-3 rounded-2xl flex flex-col items-center justify-center border border-white/20 disabled:opacity-50 active:scale-95"
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors p-3 rounded-2xl flex flex-col items-center justify-center border border-white/30 disabled:opacity-50 active:scale-95 shadow-inner"
         >
           <Download className="w-5 h-5 mb-1" />
           <span className="text-[10px] font-medium tracking-wide">Excel</span>
         </button>
       </div>
 
-      {/* 新增：智能搜索框 */}
       <div className="relative mb-2">
         <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
         <input
@@ -1358,11 +1380,11 @@ function WordsTab({ themeObj, words, onDelete }) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="搜寻生字或意思..."
-          className="w-full bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl py-3.5 pl-11 pr-12 focus:outline-none focus:ring-1 focus:ring-zinc-300 transition-all text-sm"
+          className="w-full bg-white/90 backdrop-blur-md border border-zinc-200 shadow-sm rounded-2xl py-3.5 pl-11 pr-12 focus:outline-none focus:ring-1 focus:ring-zinc-400 transition-all text-sm"
         />
         <button 
           onClick={handleVoiceSearch} 
-          className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-zinc-400 hover:bg-zinc-100'}`}
+          className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-zinc-500 hover:bg-zinc-100'}`}
         >
           <Mic className="w-4 h-4" />
         </button>
@@ -1376,7 +1398,7 @@ function WordsTab({ themeObj, words, onDelete }) {
             className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               filter === cat 
                 ? `${themeObj.primary} text-white shadow-md` 
-                : 'bg-white/60 text-zinc-600 hover:bg-white border border-white'
+                : 'bg-white/70 text-zinc-600 hover:bg-white border border-zinc-200/50'
             }`}
           >
             {cat}
@@ -1389,26 +1411,26 @@ function WordsTab({ themeObj, words, onDelete }) {
           sortedWords.map(w => (
             <div key={w.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm flex items-center justify-between group relative overflow-hidden">
               <div className="flex items-center">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-zinc-100/80 text-zinc-500 border border-zinc-200`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-zinc-50 text-zinc-500 border border-zinc-200 shadow-inner`}>
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="font-semibold text-zinc-900 text-lg leading-tight">{w.word}</p>
-                  <p className="text-sm text-zinc-500 mt-1">{w.meaning}</p>
-                  <p className="text-[10px] text-zinc-400 mt-1.5 flex items-center gap-2">
-                    <span className="bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600 font-medium">{w.category}</span>
+                  <p className="text-sm text-zinc-600 mt-1">{w.meaning}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1.5 flex items-center gap-2">
+                    <span className="bg-zinc-200/60 px-1.5 py-0.5 rounded text-zinc-700 font-medium border border-zinc-200/80">{w.category}</span>
                     {new Date(w.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               </div>
-              <button onClick={() => onDelete(w.id)} className="text-red-400 bg-white p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity self-start">
+              <button onClick={() => onDelete(w.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity self-start hover:bg-red-100">
                   <Trash2 className="w-4 h-4" />
               </button>
             </div>
           ))
         ) : (
-          <div className="text-center py-12 text-zinc-400 bg-white/40 rounded-3xl border border-dashed border-zinc-300">
-            <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-20" />
+          <div className="text-center py-12 text-zinc-500 bg-white/60 rounded-3xl border border-dashed border-zinc-400">
+            <BookOpen className="w-8 h-8 mx-auto mb-3 opacity-30" />
             <p>{searchQuery ? '没有搜寻到相关生字哦' : '还没有记录的生字哦'}</p>
           </div>
         )}
