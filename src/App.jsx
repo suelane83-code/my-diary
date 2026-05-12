@@ -1029,15 +1029,12 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
 
     const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
-    const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
 
     if (!isCanvasPreview && !GEMINI_API_KEY) {
          return "呜呜宝贝，缺少 API Key 啦 🥺";
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-    
-    // 强制整理聊天记录，绝对保证 user 和 model (AI) 交替出现，防止 400 Bad Request 错误！
+    // 强制整理聊天记录，绝对保证 user 和 model (AI) 交替出现，防止 400 错误
     const contents = [];
     const recentHistory = history.slice(-12).filter(msg => msg.text && msg.text.trim() !== ""); 
     
@@ -1048,14 +1045,12 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
         contents.push({ role: role, parts: [{ text: msg.text }] });
         expectedRole = role === 'user' ? 'model' : 'user';
       } else {
-        // 如果出现连着两条同样身份的信息（比如断网导致连发两条），就把它悄悄合并成一条
         if (contents.length > 0) {
           contents[contents.length - 1].parts[0].text += `\n${msg.text}`;
         }
       }
     }
     
-    // 最后再把孩子刚才输入的这句话补在最下面
     if (expectedRole === 'user') {
       contents.push({ role: 'user', parts: [{ text: prompt }] });
     } else {
@@ -1066,36 +1061,63 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
       }
     }
 
-    const payload = {
+    const basePayload = {
       contents: contents,
       systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜，名叫树洞。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
+    // 智能备用模型列表：如果某个模型没有权限，自动切换下一个
+    const modelsToTry = isCanvasPreview 
+      ? ["gemini-2.5-flash-preview-09-2025"] 
+      : ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+
     for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+      let lastErrorMsg = "";
+      
+      for (const modelName of modelsToTry) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
         
-        if (!response.ok) {
-          const errData = await response.json();
-          // 精准捕捉并暴露具体的网络错误，如果 API Key 填错就能直接看见了！
-          const errMsg = errData?.error?.message || response.statusText;
-          console.error(`Gemini API Failed:`, errMsg);
-          throw new Error(errMsg);
+        // 如果降级到了基础版的 gemini-pro，需要移除 systemInstruction，否则会报错
+        const currentPayload = { ...basePayload };
+        if (modelName === "gemini-pro") {
+          delete currentPayload.systemInstruction;
         }
-        
-        const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
-      } catch (err) {
-        console.error("Gemini API Error:", err);
-        if (i === retries - 1) {
-           return `抱歉宝贝，脑电波被外星人拦截啦 🥺 (具体错误: ${err.message})。请检查一下 API Key 是不是填错或者没开通哦！`;
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentPayload)
+          });
+          
+          if (!response.ok) {
+            const errData = await response.json();
+            lastErrorMsg = errData?.error?.message || response.statusText;
+            
+            // 核心修复：如果是 404 或者提示找不到该模型，直接拦截，换下一个大门！
+            if (response.status === 404 || lastErrorMsg.includes("not found")) {
+              console.warn(`Model ${modelName} not found, trying next...`);
+              continue; 
+            }
+            throw new Error(lastErrorMsg);
+          }
+          
+          const result = await response.json();
+          return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
+        } catch (err) {
+          lastErrorMsg = err.message;
+          console.error(`Gemini API Error with ${modelName}:`, err);
+          // 如果不是模型找不到的问题（比如断网），就跳出选模型循环，去等待并重试
+          if (!lastErrorMsg.includes("not found")) {
+              break;
+          }
         }
-        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
+      
+      if (i === retries - 1) {
+         return `抱歉宝贝，这把钥匙可能没权限进大门 🥺 (错误: ${lastErrorMsg})。请让妈妈去 Google AI Studio 重新生成一个新的 API Key 试试哦！`;
+      }
+      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
     }
   };
 
