@@ -6,13 +6,13 @@ import {
   Smile, Edit3, X, Bot, Send,
   Leaf, Flower2, Droplets, Sun, Star,
   BookOpen, Download, FileText,
-  Search, Mic, Camera, ChevronRight, ChevronDown
+  Search, Mic, Camera, ChevronRight, ChevronDown, ShieldAlert, KeyRound
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { 
   getFirestore, collection, doc, setDoc, onSnapshot, 
-  addDoc, deleteDoc 
+  addDoc, deleteDoc, getDoc 
 } from 'firebase/firestore';
 
 // --- THEME DEFINITIONS (已加深颜色，更明显鲜艳) ---
@@ -66,17 +66,25 @@ const floatingStyles = `
 export default function App() {
   const [user, setUser] = useState(null);
   const [roomNumber, setRoomNumber] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // 新的 Auth 状态管理: 'room_input', 'setup', 'verify', 'main'
+  const [authStep, setAuthStep] = useState('room_input'); 
+  const [roomConfig, setRoomConfig] = useState(null);
   
   const [activeTab, setActiveTab] = useState('home');
   const [theme, setTheme] = useState('blue');
   
   // Loading and Setup states
-  const [isLoading, setIsLoading] = useState(true);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
 
-  // User details
+  // Auth Inputs
+  const [inputName, setInputName] = useState('');
+  const [inputQ1, setInputQ1] = useState(''); // Cartoon
+  const [inputQ2, setInputQ2] = useState(''); // Food
+  const [authError, setAuthError] = useState('');
+
+  // User details for App
   const [userName, setUserName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -105,15 +113,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Data after Login
+  // 2. Fetch Data ONLY after successfully entering 'main'
   useEffect(() => {
-    if (!user || !isLoggedIn || !roomNumber) return;
+    if (!user || authStep !== 'main' || !roomNumber) return;
 
     setIsLoading(true);
-    setSettingsLoaded(false);
     const prefix = `room_${roomNumber}`;
     
-    // Paths
     const eventsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_events`);
     const financesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_finances`);
     const diariesRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_diaries`);
@@ -121,14 +127,12 @@ export default function App() {
     const wordsRef = collection(db, 'artifacts', appId, 'public', 'data', `${prefix}_words`); 
     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `${prefix}_settings`, 'config');
 
-    // Listeners
     const unsubEvents = onSnapshot(eventsRef, (snap) => setEvents(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubFinances = onSnapshot(financesRef, (snap) => setFinances(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubDiaries = onSnapshot(diariesRef, (snap) => setDiaries(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubChats = onSnapshot(chatsRef, (snap) => setChats(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubWords = onSnapshot(wordsRef, (snap) => setWords(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error); 
     
-    // Settings listener
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -136,17 +140,14 @@ export default function App() {
         if (data.timetableImg) setTimetableImg(data.timetableImg);
         if (data.timetableRemark !== undefined) setTimetableRemark(data.timetableRemark);
         if (data.userName !== undefined) setUserName(data.userName);
-      } else {
-        setUserName('');
       }
-      setSettingsLoaded(true);
       setIsLoading(false);
     }, (err) => { console.error(err); setIsLoading(false); });
 
     return () => {
       unsubEvents(); unsubFinances(); unsubDiaries(); unsubChats(); unsubWords(); unsubSettings();
     };
-  }, [user, isLoggedIn, roomNumber]);
+  }, [user, authStep, roomNumber]);
 
   // Firebase Helpers
   const addRecord = async (colName, data) => {
@@ -162,30 +163,124 @@ export default function App() {
     await setDoc(docRef, data, { merge: true });
   };
 
-  const handleLogin = (e) => {
+  // --- NEW SECURITY LOGIC ---
+  const handleRoomCheck = async (e) => {
     e.preventDefault();
-    if (roomNumber.trim().length > 0) setIsLoggedIn(true);
+    if (!roomNumber.trim()) return;
+    setIsLoading(true);
+
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', `room_${roomNumber}_settings`, 'config');
+      const snap = await getDoc(docRef);
+      
+      if (snap.exists() && snap.data().userName) {
+        // 房间已存在，检查设备记忆
+        const configData = snap.data();
+        setRoomConfig(configData);
+        if (configData.theme) setTheme(configData.theme);
+
+        const isRemembered = localStorage.getItem(`diary_auth_${roomNumber}`);
+        if (isRemembered === 'true') {
+          // 在固定的设备上，无需再答题
+          setAuthStep('main');
+        } else {
+          // 换设备了，需要安全验证
+          setAuthStep('verify');
+        }
+      } else {
+        // 全新的房间，去设置密保
+        setAuthStep('setup');
+      }
+    } catch (err) {
+      console.error("Fetch room error:", err);
+    }
+    setIsLoading(false);
   };
 
-  const handleSaveName = () => {
+  const handleSetupSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputName.trim() || !inputQ1.trim() || !inputQ2.trim()) return;
+    setIsLoading(true);
+    await updateSettings({
+      userName: inputName.trim(),
+      q1: inputQ1.trim(),
+      q2: inputQ2.trim(),
+      theme: 'blue'
+    });
+    localStorage.setItem(`diary_auth_${roomNumber}`, 'true'); // 记录当前设备为受信任
+    setAuthStep('main');
+    setIsLoading(false);
+  };
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    
+    if (!inputName.trim()) return;
+    
+    // 1. 名字必须对
+    const isNameCorrect = inputName.trim() === roomConfig.userName;
+    if (!isNameCorrect) {
+      setAuthError('名字不对哦，是不是进错房间啦？');
+      return;
+    }
+
+    // 处理以前没有设置过密保的老用户
+    if (!roomConfig.q1 && !roomConfig.q2) {
+      if (!inputQ1.trim() || !inputQ2.trim()) {
+        setAuthError('这是你第一次用新版安全系统，请填写两个问题作为以后的密保！');
+        return;
+      }
+      setIsLoading(true);
+      await updateSettings({ q1: inputQ1.trim(), q2: inputQ2.trim() });
+      localStorage.setItem(`diary_auth_${roomNumber}`, 'true');
+      setAuthStep('main');
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. 两个问题答对任意一个即可
+    const isQ1Correct = inputQ1.trim() === roomConfig.q1;
+    const isQ2Correct = inputQ2.trim() === roomConfig.q2;
+
+    if (!isQ1Correct && !isQ2Correct && (inputQ1.trim() || inputQ2.trim())) {
+      setAuthError('密保问题不对哦，禁止访问！🔒');
+      return;
+    } else if (!inputQ1.trim() && !inputQ2.trim()) {
+       setAuthError('请至少回答一个密保问题证明身份！');
+       return;
+    }
+
+    // 验证成功
+    localStorage.setItem(`diary_auth_${roomNumber}`, 'true');
+    setAuthStep('main');
+  };
+
+  const handleLogout = () => {
+    // 退出时不清除 localStorage，下次来输入正确房号还能秒进
+    // 除非你想完全清空设备记忆，可以加上 localStorage.removeItem(...)
+    setRoomNumber('');
+    setInputName('');
+    setInputQ1('');
+    setInputQ2('');
+    setAuthError('');
+    setAuthStep('room_input');
+  };
+
+  const handleSaveNameEdit = () => {
     if (!tempName.trim()) return;
     updateSettings({ userName: tempName.trim() });
     setUserName(tempName.trim());
     setIsEditingName(false);
   };
 
-  const handleFirstTimeNameSubmit = (e) => {
-    e.preventDefault();
-    handleSaveName();
-  };
-
-  const currentTheme = THEMES[theme];
+  const currentTheme = THEMES[theme] || THEMES.blue;
   const DecorIcon = currentTheme.Decor;
 
   // ---------------------------------------------
-  // SCREEN 1: LOGIN / LOGOUT SCREEN
+  // SCREEN 1: LOGIN (ENTER ROOM)
   // ---------------------------------------------
-  if (!isLoggedIn) {
+  if (authStep === 'room_input') {
     return (
       <div className="flex justify-center bg-gray-100 min-h-screen items-center p-4 font-sans">
         <style>{floatingStyles}</style>
@@ -198,9 +293,9 @@ export default function App() {
               <Leaf className="w-10 h-10 text-emerald-500 -rotate-3" />
             </div>
             <h1 className="text-3xl font-medium tracking-tight mb-2 text-zinc-900">进入树洞</h1>
-            <p className="text-zinc-500 text-sm mb-8">输入专属房号，打开你的秘密空间</p>
+            <p className="text-zinc-500 text-sm mb-8">输入专属房号，打开秘密空间</p>
             
-            <form onSubmit={handleLogin} className="space-y-4 w-full">
+            <form onSubmit={handleRoomCheck} className="space-y-4 w-full">
               <input
                 type="text"
                 placeholder="例如: 8888"
@@ -211,9 +306,10 @@ export default function App() {
               />
               <button 
                 type="submit"
-                className="w-full bg-zinc-900 text-white py-4 rounded-2xl font-medium active:scale-95 transition-all shadow-md shadow-zinc-900/20"
+                disabled={isLoading}
+                className="w-full bg-zinc-900 text-white py-4 rounded-2xl font-medium active:scale-95 transition-all shadow-md shadow-zinc-900/20 disabled:bg-zinc-400 flex items-center justify-center"
               >
-                进入房间
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '查询房间'}
               </button>
             </form>
           </div>
@@ -223,38 +319,57 @@ export default function App() {
   }
 
   // ---------------------------------------------
-  // SCREEN 2: FIRST TIME NAME SETUP
+  // SCREEN 2: FIRST TIME SETUP
   // ---------------------------------------------
-  if (settingsLoaded && !userName) {
+  if (authStep === 'setup') {
     return (
       <div className={`flex justify-center bg-gray-100 min-h-screen font-sans`}>
         <style>{floatingStyles}</style>
-        <div className={`w-full max-w-md ${currentTheme.bg} min-h-screen shadow-2xl relative flex flex-col justify-center items-center p-8 transition-colors duration-500 overflow-hidden`}>
+        <div className={`w-full max-w-md ${currentTheme.bg} min-h-screen shadow-2xl relative flex flex-col justify-center items-center p-6 transition-colors duration-500 overflow-hidden`}>
           <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-40 animate-float-1 bg-gradient-to-br ${currentTheme.gradient}`}></div>
           <div className={`absolute bottom-0 left-0 w-56 h-56 rounded-full blur-3xl opacity-40 animate-float-2 bg-gradient-to-tr ${currentTheme.gradient}`}></div>
 
-          <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-xl border border-white relative z-10 w-full animate-in fade-in slide-in-from-bottom-8">
-            <div className={`w-16 h-16 rounded-full ${currentTheme.light} flex items-center justify-center mb-6 mx-auto`}>
-              <Smile className={`w-8 h-8 ${currentTheme.text}`} />
+          <div className="bg-white/90 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white relative z-10 w-full animate-in fade-in slide-in-from-bottom-8">
+            <div className={`w-14 h-14 rounded-full ${currentTheme.light} flex items-center justify-center mb-4 mx-auto`}>
+              <Smile className={`w-7 h-7 ${currentTheme.text}`} />
             </div>
-            <h2 className="text-2xl font-medium text-center text-zinc-900 mb-2">初次见面</h2>
-            <p className="text-center text-zinc-500 text-sm mb-8">我是你的树洞管家，请问我该怎么称呼你呢？</p>
+            <h2 className="text-xl font-medium text-center text-zinc-900 mb-2">欢迎开通新树洞</h2>
+            <p className="text-center text-zinc-500 text-xs mb-6">请设置你的专属密保，以后换手机可以用它找回房间哦！</p>
 
-            <form onSubmit={handleFirstTimeNameSubmit} className="space-y-4">
+            <form onSubmit={handleSetupSubmit} className="space-y-3">
               <input
                 type="text"
-                placeholder="输入你的昵称/名字"
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                className="w-full bg-white border border-zinc-200 text-center text-xl text-black rounded-xl p-4 focus:outline-none focus:border-zinc-400 transition-colors shadow-sm"
-                autoFocus
+                placeholder="你的真实名字/昵称"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                className="w-full bg-white border border-zinc-200 text-center text-lg text-black rounded-xl p-3 focus:outline-none focus:border-zinc-400 transition-colors shadow-sm"
                 required
               />
+              <div className="pt-2 pb-1 border-t border-zinc-100">
+                <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider mb-2 text-center">🔒 设定两个安全密保</p>
+                <input
+                  type="text"
+                  placeholder="密保 1: 最喜欢的动漫/卡通人物？"
+                  value={inputQ1}
+                  onChange={(e) => setInputQ1(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-100 text-center text-sm text-black rounded-xl p-3 focus:outline-none focus:border-zinc-300 transition-colors shadow-inner mb-2"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="密保 2: 最喜欢的食物是什么？"
+                  value={inputQ2}
+                  onChange={(e) => setInputQ2(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-100 text-center text-sm text-black rounded-xl p-3 focus:outline-none focus:border-zinc-300 transition-colors shadow-inner"
+                  required
+                />
+              </div>
               <button 
                 type="submit"
-                className={`w-full ${currentTheme.primary} text-white py-4 rounded-xl font-medium active:scale-95 transition-transform shadow-md`}
+                disabled={isLoading}
+                className={`w-full ${currentTheme.primary} text-white py-3.5 rounded-xl font-medium active:scale-95 transition-transform shadow-md mt-2 flex justify-center`}
               >
-                开始体验
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '保存并开始体验'}
               </button>
             </form>
           </div>
@@ -264,7 +379,83 @@ export default function App() {
   }
 
   // ---------------------------------------------
-  // SCREEN 3: MAIN APP INTERFACE
+  // SCREEN 3: VERIFY DEVICE
+  // ---------------------------------------------
+  if (authStep === 'verify') {
+    return (
+      <div className={`flex justify-center bg-gray-100 min-h-screen font-sans`}>
+        <style>{floatingStyles}</style>
+        <div className={`w-full max-w-md ${currentTheme.bg} min-h-screen shadow-2xl relative flex flex-col justify-center items-center p-6 transition-colors duration-500 overflow-hidden`}>
+          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-40 animate-float-1 bg-gradient-to-br ${currentTheme.gradient}`}></div>
+          <div className={`absolute bottom-0 left-0 w-56 h-56 rounded-full blur-3xl opacity-40 animate-float-2 bg-gradient-to-tr ${currentTheme.gradient}`}></div>
+
+          <div className="bg-white/90 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white relative z-10 w-full animate-in fade-in slide-in-from-bottom-8">
+            <div className={`w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4 mx-auto border border-red-100`}>
+              <ShieldAlert className={`w-7 h-7 text-red-500`} />
+            </div>
+            <h2 className="text-xl font-medium text-center text-zinc-900 mb-2">安全验证</h2>
+            <p className="text-center text-zinc-500 text-xs mb-6">检测到新设备或身份未验证，请证明你是房间主人！</p>
+
+            <form onSubmit={handleVerifySubmit} className="space-y-3">
+              <div className="relative">
+                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                 <input
+                   type="text"
+                   placeholder="验证你的名字"
+                   value={inputName}
+                   onChange={(e) => setInputName(e.target.value)}
+                   className="w-full bg-white border border-zinc-200 text-lg text-black rounded-xl p-3 pl-10 focus:outline-none focus:border-zinc-400 transition-colors shadow-sm"
+                   required
+                 />
+              </div>
+              <div className="pt-2 pb-1 border-t border-zinc-100">
+                <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider mb-2 text-center">答对以下任意一题密保即可进入</p>
+                <div className="relative mb-2">
+                   <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                   <input
+                     type="text"
+                     placeholder="密保 1: 最喜欢的动漫/卡通人物？"
+                     value={inputQ1}
+                     onChange={(e) => setInputQ1(e.target.value)}
+                     className="w-full bg-zinc-50 border border-zinc-100 text-sm text-black rounded-xl p-3 pl-10 focus:outline-none focus:border-zinc-300 transition-colors shadow-inner"
+                   />
+                </div>
+                <div className="relative">
+                   <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                   <input
+                     type="text"
+                     placeholder="密保 2: 最喜欢的食物是什么？"
+                     value={inputQ2}
+                     onChange={(e) => setInputQ2(e.target.value)}
+                     className="w-full bg-zinc-50 border border-zinc-100 text-sm text-black rounded-xl p-3 pl-10 focus:outline-none focus:border-zinc-300 transition-colors shadow-inner"
+                   />
+                </div>
+              </div>
+              
+              {authError && (
+                 <div className="bg-red-50 text-red-500 text-xs p-2.5 rounded-xl border border-red-100 text-center animate-in shake">
+                    {authError}
+                 </div>
+              )}
+
+              <button 
+                type="submit"
+                disabled={isLoading}
+                className={`w-full ${currentTheme.primary} text-white py-3.5 rounded-xl font-medium active:scale-95 transition-transform shadow-md mt-2 flex justify-center`}
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '验证并进入房间'}
+              </button>
+            </form>
+
+            <button onClick={handleLogout} className="w-full text-center text-xs text-zinc-400 mt-4 underline underline-offset-2">不是我的房间，返回首页</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------
+  // SCREEN 4: MAIN APP INTERFACE
   // ---------------------------------------------
   return (
     <div className={`flex justify-center bg-gray-100 min-h-screen`}>
@@ -277,11 +468,11 @@ export default function App() {
         <div className={`absolute top-10 right-0 w-64 h-64 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-1 bg-gradient-to-br ${currentTheme.gradient}`}></div>
         <div className={`absolute bottom-20 left-0 w-56 h-56 rounded-full blur-3xl opacity-40 pointer-events-none animate-float-2 bg-gradient-to-tr ${currentTheme.gradient}`}></div>
 
-        {/* --- DYNAMIC BACKGROUND PATTERN --- */}
+        {/* --- DYNAMIC BACKGROUND PATTERN (加深透明度 opacity-15) --- */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <DecorIcon className={`absolute top-[10%] -left-10 w-48 h-48 opacity-[0.03] ${currentTheme.text} rotate-12 animate-float-2`} />
-          <DecorIcon className={`absolute top-[40%] -right-16 w-64 h-64 opacity-[0.03] ${currentTheme.text} -rotate-12 animate-float-1`} />
-          <DecorIcon className={`absolute -bottom-5 left-[15%] w-40 h-40 opacity-[0.03] ${currentTheme.text} rotate-45 animate-float-2`} />
+          <DecorIcon className={`absolute top-[10%] -left-10 w-48 h-48 opacity-15 ${currentTheme.text} rotate-12 animate-float-2`} />
+          <DecorIcon className={`absolute top-[40%] -right-16 w-64 h-64 opacity-15 ${currentTheme.text} -rotate-12 animate-float-1`} />
+          <DecorIcon className={`absolute -bottom-5 left-[15%] w-40 h-40 opacity-15 ${currentTheme.text} rotate-45 animate-float-2`} />
         </div>
 
         {/* Main Scrollable Content */}
@@ -300,7 +491,7 @@ export default function App() {
                     placeholder="你的名字"
                     autoFocus
                   />
-                  <button onClick={handleSaveName} className={`p-1.5 ${currentTheme.primary} text-white rounded-md shadow-sm`}><CheckCircle2 className="w-4 h-4"/></button>
+                  <button onClick={handleSaveNameEdit} className={`p-1.5 ${currentTheme.primary} text-white rounded-md shadow-sm`}><CheckCircle2 className="w-4 h-4"/></button>
                   <button onClick={() => setIsEditingName(false)} className="p-1.5 bg-white text-zinc-600 rounded-md shadow-sm border border-zinc-200"><X className="w-4 h-4"/></button>
                 </div>
               ) : (
@@ -314,7 +505,6 @@ export default function App() {
                   ，欢迎回来，<br className="md:hidden"/>我是您的专属树洞。
                 </h1>
               )}
-              {/* 移除了显眼的房号，只保留同步状态 */}
               <p className="text-zinc-500 text-[11px] mt-1.5 font-light tracking-wide flex items-center gap-1.5 opacity-80">
                 <Leaf className="w-3 h-3 text-emerald-500" />
                 <span>{isLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : '云端已同步'}</span>
@@ -342,7 +532,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => setIsLoggedIn(false)} className="p-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-white text-red-500 hover:bg-red-50 transition-colors">
+              <button onClick={handleLogout} className="p-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-white text-red-500 hover:bg-red-50 transition-colors">
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
@@ -413,9 +603,9 @@ export default function App() {
             <NavItem icon={<ImageIcon size={20} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
             <NavItem icon={<Smile size={20} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
           </div>
-          {/* 将房号藏在了最底部的这里，并且做了低透明度处理 */}
+          {/* 隐藏的房号 */}
           <p className="text-center text-[8px] text-zinc-500/50 mt-1 font-light tracking-widest pointer-events-none flex items-center justify-center gap-1">
-            This app is made by Suelane 12/5/2026. <span className="opacity-20">|</span> <span className="opacity-40 tracking-normal">Room: {roomNumber}</span>
+            This app is made by Suelane 12/5/2026. <span className="opacity-20">|</span> <span className="opacity-30 tracking-normal">Room: {roomNumber}</span>
           </p>
         </nav>
       </div>
@@ -1023,7 +1213,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     setDiaryImage(null); 
   };
 
-  // --- 彻底修复了导致网络错误的对话历史逻辑 ---
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
     const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
@@ -1034,7 +1223,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
          return "呜呜宝贝，缺少 API Key 啦 🥺";
     }
 
-    // 强制整理聊天记录，绝对保证 user 和 model (AI) 交替出现，防止 400 错误
     const contents = [];
     const recentHistory = history.slice(-12).filter(msg => msg.text && msg.text.trim() !== ""); 
     
@@ -1061,72 +1249,48 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
       }
     }
 
-    const basePayload = {
+    const payload = {
       contents: contents,
       systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜，名叫树洞。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
-    // 智能备用模型列表：如果某个模型没有权限，自动切换下一个
-    const modelsToTry = isCanvasPreview 
-      ? ["gemini-2.5-flash-preview-09-2025"] 
-      : ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+    const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     for (let i = 0; i < retries; i++) {
-      let lastErrorMsg = "";
-      
-      for (const modelName of modelsToTry) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
         
-        // 如果降级到了基础版的 gemini-pro，需要移除 systemInstruction，否则会报错
-        const currentPayload = { ...basePayload };
-        if (modelName === "gemini-pro") {
-          delete currentPayload.systemInstruction;
-        }
-
-        try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentPayload)
-          });
-          
-          // 使用 text() 获取原始响应内容，避免抛出 Unexpected end of input 错误
-          const responseText = await response.text();
-          
-          if (!response.ok) {
-            let errorMsg = response.statusText;
-            try {
-               const errData = JSON.parse(responseText);
-               errorMsg = errData?.error?.message || errorMsg;
-            } catch (parseErr) {
-               errorMsg = responseText || errorMsg;
-            }
-            lastErrorMsg = errorMsg;
-            
-            // 核心修复：如果是 404 或者提示找不到该模型，直接拦截，换下一个大门！
-            if (response.status === 404 || lastErrorMsg.includes("not found")) {
-              console.warn(`Model ${modelName} not found, trying next...`);
-              continue; 
-            }
-            throw new Error(lastErrorMsg);
+        const responseText = await response.text();
+        
+        if (!response.ok) {
+          let errorMsg = response.statusText;
+          try {
+             const errData = JSON.parse(responseText);
+             errorMsg = errData?.error?.message || errorMsg;
+          } catch (parseErr) {
+             errorMsg = responseText || errorMsg;
           }
           
-          const result = responseText ? JSON.parse(responseText) : {};
-          return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
-        } catch (err) {
-          lastErrorMsg = err.message;
-          console.error(`Gemini API Error with ${modelName}:`, err);
-          // 如果不是模型找不到的问题（比如断网），就跳出选模型循环，去等待并重试
-          if (!lastErrorMsg.includes("not found")) {
-              break;
+          if (errorMsg.includes("not found")) {
+             return `抱歉宝贝，Google 说这把钥匙打不开大门 🥺 (现在的 API Key 没有最新的 Gemini 1.5 权限)。请妈妈去【aistudio.google.com/app/apikey】点击蓝色按钮重新生成一个全新的 API Key 哦！`;
           }
+          throw new Error(errorMsg);
         }
+        
+        const result = responseText ? JSON.parse(responseText) : {};
+        return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
+      } catch (err) {
+        console.error(`Gemini API Error with ${modelName}:`, err);
+        if (i === retries - 1) {
+           return `抱歉宝贝，脑电波暂时没连上 🥺 (错误: ${err.message})。`;
+        }
+        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
-      
-      if (i === retries - 1) {
-         return `抱歉宝贝，脑电波暂时没连上 🥺 (错误: ${lastErrorMsg})。请检查一下 API Key 哦！`;
-      }
-      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
     }
   };
 
