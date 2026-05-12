@@ -23,7 +23,6 @@ const THEMES = {
 };
 
 // --- FIREBASE INITIALIZATION ---
-// 这里已经直接加入了你专属的 Firebase 配置
 const firebaseConfig = {
   apiKey: "AIzaSyAnwNLZzjhAdA2vfIgqKtmANTuS6ZLny98",
   authDomain: "my-diary-189f8.firebaseapp.com",
@@ -39,7 +38,7 @@ try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
-  appId = "my-diary-app"; // 这是一个固定的标识符，用于在数据库中分类
+  appId = "my-diary-app";
 } catch (e) {
   console.error("Firebase initialization skipped or failed:", e);
 }
@@ -88,7 +87,7 @@ export default function App() {
   const [diaries, setDiaries] = useState([]);
   const [chats, setChats] = useState([]);
 
-  // 1. Initialize Auth (简化为独立部署的匿名登录)
+  // 1. Initialize Auth
   useEffect(() => {
     if (!auth) return;
     const initAuth = async () => {
@@ -124,7 +123,7 @@ export default function App() {
     const unsubDiaries = onSnapshot(diariesRef, (snap) => setDiaries(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     const unsubChats = onSnapshot(chatsRef, (snap) => setChats(snap.docs.map(d => ({id: d.id, ...d.data()}))), console.error);
     
-    // Settings listener (determines if it's a first-time user)
+    // Settings listener
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -133,7 +132,7 @@ export default function App() {
         if (data.timetableRemark !== undefined) setTimetableRemark(data.timetableRemark);
         if (data.userName !== undefined) setUserName(data.userName);
       } else {
-        setUserName(''); // No settings means new room
+        setUserName('');
       }
       setSettingsLoaded(true);
       setIsLoading(false);
@@ -310,10 +309,10 @@ export default function App() {
                   ，欢迎回来，<br className="md:hidden"/>我是您的专属树洞。
                 </h1>
               )}
-              <p className="text-zinc-500 text-sm mt-2 tracking-wide flex items-center gap-2">
-                <Leaf className="w-3 h-3 text-emerald-500" />
+              <p className="text-zinc-400 text-[11px] mt-1.5 font-light tracking-wide flex items-center gap-1.5 opacity-80">
+                <Leaf className="w-3 h-3 text-emerald-400" />
                 <span>房号: {roomNumber}</span>
-                <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
+                <span className="w-1 h-1 bg-zinc-200 rounded-full"></span>
                 <span>{isLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : '已同步'}</span>
               </p>
             </div>
@@ -393,12 +392,15 @@ export default function App() {
         </div>
 
         {/* Bottom Navigation */}
-        <nav className="absolute bottom-0 w-full bg-white/70 backdrop-blur-xl border-t border-white/50 pb-safe pt-2 px-4 flex justify-between items-center z-40 rounded-t-[2rem]">
-          <NavItem icon={<Home size={22} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
-          <NavItem icon={<Calendar size={22} />} label="活动" active={activeTab === 'events'} onClick={() => setActiveTab('events')} themeObj={currentTheme}/>
-          <NavItem icon={<Wallet size={22} />} label="财务" active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} themeObj={currentTheme}/>
-          <NavItem icon={<ImageIcon size={22} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
-          <NavItem icon={<Smile size={22} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
+        <nav className="absolute bottom-0 w-full bg-white/70 backdrop-blur-xl border-t border-white/50 pt-2 px-4 pb-2 flex flex-col z-40 rounded-t-[2rem]">
+          <div className="flex justify-between items-center w-full">
+            <NavItem icon={<Home size={22} />} label="首页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} themeObj={currentTheme}/>
+            <NavItem icon={<Calendar size={22} />} label="活动" active={activeTab === 'events'} onClick={() => setActiveTab('events')} themeObj={currentTheme}/>
+            <NavItem icon={<Wallet size={22} />} label="财务" active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} themeObj={currentTheme}/>
+            <NavItem icon={<ImageIcon size={22} />} label="课表" active={activeTab === 'timetable'} onClick={() => setActiveTab('timetable')} themeObj={currentTheme}/>
+            <NavItem icon={<Smile size={22} />} label="树洞" active={activeTab === 'treehole'} onClick={() => setActiveTab('treehole')} themeObj={currentTheme}/>
+          </div>
+          <p className="text-center text-[8px] text-zinc-400/40 mt-1 font-light tracking-widest pointer-events-none">This app is made by Suelane 12/5/2026.</p>
         </nav>
       </div>
     </div>
@@ -680,6 +682,21 @@ function FinanceTab({ themeObj, finances, onDelete }) {
   const balance = totalIncome - totalExpense;
   const sortedFinances = [...finances].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  // --- CALCULATE PIE CHART DATA ---
+  const expenses = finances.filter(f => f.type === 'expense');
+  const categoryTotals = expenses.reduce((acc, curr) => {
+    acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
+    return acc;
+  }, {});
+  
+  const expenseColors = {
+    '饮食': '#fbbf24', // yellow
+    '交通': '#60a5fa', // blue
+    '学习用品': '#34d399', // green
+    '娱乐': '#a78bfa', // purple
+    '其他': '#f472b6' // pink
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative z-10">
       <div className={`${themeObj.primary} text-white rounded-3xl p-6 shadow-xl relative overflow-hidden transition-colors duration-500`}>
@@ -704,6 +721,49 @@ function FinanceTab({ themeObj, finances, onDelete }) {
           </div>
         </div>
       </div>
+
+      {/* --- ADD PIE CHART UI --- */}
+      {totalExpense > 0 && (
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-white shadow-sm flex flex-col items-center animate-in slide-in-from-bottom-4">
+          <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-4 w-full text-left">支出统计图</h3>
+          <div className="relative w-36 h-36 mb-6 mt-2">
+            <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 drop-shadow-sm overflow-visible">
+              <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#f1f5f9" strokeWidth="6" />
+              {Object.entries(categoryTotals).map(([cat, amount], index, arr) => {
+                const percentage = (amount / totalExpense) * 100;
+                const dashArray = `${percentage} ${100 - percentage}`;
+                const prevTotal = arr.slice(0, index).reduce((sum, [, a]) => sum + (a / totalExpense) * 100, 0);
+                const offset = -prevTotal;
+                return (
+                  <circle
+                    key={cat}
+                    cx="21" cy="21" r="15.9155"
+                    fill="transparent"
+                    stroke={expenseColors[cat] || '#cbd5e1'}
+                    strokeWidth="6"
+                    strokeDasharray={dashArray}
+                    strokeDashoffset={offset}
+                    className="transition-all duration-1000 ease-out"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[10px] text-zinc-400 mb-0.5">总支出</span>
+              <span className="text-lg font-semibold text-zinc-700 leading-none">RM{totalExpense.toFixed(0)}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2.5 w-full">
+            {Object.entries(categoryTotals).map(([cat, amount]) => (
+              <div key={cat} className="flex items-center text-[11px] font-medium text-zinc-600 bg-white/60 px-2.5 py-1.5 rounded-xl shadow-sm border border-white">
+                <span className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-inner" style={{ backgroundColor: expenseColors[cat] || '#cbd5e1' }}></span>
+                {cat} <span className="text-zinc-400 ml-1 font-normal">{(amount/totalExpense*100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase mb-4">交易记录</h3>
@@ -842,21 +902,19 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
   };
 
   const callGeminiWithRetry = async (prompt, retries = 3) => {
-    // ⚠️ 注意：如果你部署在自己的 Vercel 上，你需要在这里填入你自己的 Gemini API Key
-    // 你可以去 Google AI Studio 免费申请一个
-    const GEMINI_API_KEY = typeof process !== 'undefined' && process.env.VITE_GEMINI_API_KEY ? process.env.VITE_GEMINI_API_KEY : ""; 
+    // ⚠️⚠️⚠️ 终极重要步骤：在这里填入你的专属 Gemini API Key ⚠️⚠️⚠️
+    // 获取免费 Key 的网址：https://aistudio.google.com/app/apikey
+    // 请把下面双引号里的内容，替换成你申请到的真实密钥（一长串英文字母和数字）
+    const GEMINI_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
 
-    if (!GEMINI_API_KEY && (!typeof __initial_auth_token !== 'undefined')) {
-         return "抱歉，由于没有配置 AI API Key，我暂时无法回答。请在代码中配置您的 API 密钥。";
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "请把你的GEMINI密钥粘贴在这里") {
+         return "呜呜宝贝，我的脑电波暂时连不上啦 🥺 (缺少 API Key)，让妈妈帮忙在代码里设置一下 API 密钥，我们就能开心聊天啦~ ✨";
     }
 
-    // 这里使用系统的注入密钥作为备用（如果是在预览环境中运行）
-    const apiKeyToUse = GEMINI_API_KEY || (typeof __initial_auth_token !== 'undefined' ? "" : GEMINI_API_KEY);
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKeyToUse}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
-      systemInstruction: { parts: [{ text: "你是一个温暖、鼓励人心的倾听者和树洞，好朋友。你的回复应该简短、亲切、口语化，像在跟中学生聊天一样，多用表情符号。" }] }
+      systemInstruction: { parts: [{ text: "你现在是我的超级好闺蜜。说话要超级亲切、活泼、充满少女心，懂我的奇奇怪怪，也会陪我一起开心或吐槽。经常用 '宝贝'、'姐妹' 等亲昵的称呼，多用可爱的颜文字和emoji（比如 🥺, ✨, 🥰, 贴贴）。回复要简短，像微信聊天一样自然，语气像个年轻可爱的女学生，绝对不要像死板的AI机器人或者官方客服。" }] }
     };
 
     for (let i = 0; i < retries; i++) {
@@ -868,9 +926,9 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
         });
         if (!response.ok) throw new Error('API Error');
         const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || "我不太明白，能再说一次吗？";
+        return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
       } catch (err) {
-        if (i === retries - 1) return "抱歉，我现在有点累了，我们稍后再聊吧。(网络错误)";
+        if (i === retries - 1) return "抱歉宝贝，我现在脑子有点转不过来了，我们稍后再聊吧~ (网络错误) 🥺";
         await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
     }
