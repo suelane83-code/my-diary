@@ -1163,7 +1163,7 @@ function FinanceTab({ themeObj, finances, onUpdateFinance, onDelete }) {
                     <button onClick={() => startEdit(item)} className="text-zinc-500 bg-zinc-50 p-1.5 rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-200/50">
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm hover:bg-red-100 border border-red-100/50">
+                    <button onClick={() => onDelete(item.id)} className="text-red-500 bg-red-50 p-1.5 rounded-full shadow-sm md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 border border-red-100/50">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1330,7 +1330,7 @@ function TreeHoleTab({ themeObj, diaries, chats, savedChats, onAddDiary, onUpdat
   // --- 强制使用最兼容的 v1beta 解决 "systemInstruction" 错误 ---
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
-    const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
+    const USER_API_KEY = "AIzaSyDcm30t3uRj8ZXmtoN22fB9I6NHKm4btb0"; 
     const GEMINI_API_KEY = isCanvasPreview ? "" : USER_API_KEY;
 
     if (!isCanvasPreview && !GEMINI_API_KEY) {
