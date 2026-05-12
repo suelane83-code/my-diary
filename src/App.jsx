@@ -15,13 +15,13 @@ import {
   addDoc, deleteDoc 
 } from 'firebase/firestore';
 
-// --- THEME DEFINITIONS (已加深颜色) ---
+// --- THEME DEFINITIONS (已加深颜色，更明显鲜艳) ---
 const THEMES = {
-  blue: { bg: 'bg-blue-100/90', primary: 'bg-blue-600', text: 'text-blue-700', light: 'bg-blue-200', border: 'border-blue-300', gradient: 'from-blue-300 to-blue-100', Decor: Droplets },
-  pink: { bg: 'bg-pink-100/90', primary: 'bg-pink-600', text: 'text-pink-700', light: 'bg-pink-200', border: 'border-pink-300', gradient: 'from-pink-300 to-pink-100', Decor: Flower2 },
-  yellow: { bg: 'bg-amber-100/90', primary: 'bg-amber-500', text: 'text-amber-700', light: 'bg-amber-200', border: 'border-amber-300', gradient: 'from-amber-300 to-amber-100', Decor: Sun },
-  green: { bg: 'bg-emerald-100/90', primary: 'bg-emerald-600', text: 'text-emerald-700', light: 'bg-emerald-200', border: 'border-emerald-300', gradient: 'from-emerald-300 to-emerald-100', Decor: Leaf },
-  purple: { bg: 'bg-purple-100/90', primary: 'bg-purple-600', text: 'text-purple-700', light: 'bg-purple-200', border: 'border-purple-300', gradient: 'from-purple-300 to-purple-100', Decor: Star },
+  blue: { bg: 'bg-blue-200/80', primary: 'bg-blue-600', text: 'text-blue-800', light: 'bg-blue-300', border: 'border-blue-400', gradient: 'from-blue-400 to-blue-200', Decor: Droplets },
+  pink: { bg: 'bg-pink-200/80', primary: 'bg-pink-600', text: 'text-pink-800', light: 'bg-pink-300', border: 'border-pink-400', gradient: 'from-pink-400 to-pink-200', Decor: Flower2 },
+  yellow: { bg: 'bg-amber-200/80', primary: 'bg-amber-500', text: 'text-amber-800', light: 'bg-amber-300', border: 'border-amber-400', gradient: 'from-amber-400 to-amber-200', Decor: Sun },
+  green: { bg: 'bg-emerald-200/80', primary: 'bg-emerald-600', text: 'text-emerald-800', light: 'bg-emerald-300', border: 'border-emerald-400', gradient: 'from-emerald-400 to-emerald-200', Decor: Leaf },
+  purple: { bg: 'bg-purple-200/80', primary: 'bg-purple-600', text: 'text-purple-800', light: 'bg-purple-300', border: 'border-purple-400', gradient: 'from-purple-400 to-purple-200', Decor: Star },
 };
 
 // --- FIREBASE INITIALIZATION ---
@@ -1023,6 +1023,7 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     setDiaryImage(null); 
   };
 
+  // --- 彻底修复了导致网络错误的对话历史逻辑 ---
   const callGeminiWithRetry = async (prompt, history = [], retries = 3) => {
     const isCanvasPreview = typeof __initial_auth_token !== 'undefined';
     const USER_API_KEY = "AIzaSyAI_hroeLO96ySb-tzzOoeZUVWC9vs26Iw"; 
@@ -1031,33 +1032,38 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     const modelName = isCanvasPreview ? "gemini-2.5-flash-preview-09-2025" : "gemini-1.5-flash";
 
     if (!isCanvasPreview && !GEMINI_API_KEY) {
-         return "呜呜宝贝，我的脑电波暂时连不上啦 🥺 (缺少 API Key)，让妈妈帮忙在代码里设置一下 API 密钥，我们就能开心聊天啦~ ✨";
+         return "呜呜宝贝，缺少 API Key 啦 🥺";
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
     
-    // 构建带有历史记录的请求，并确保角色（user / model）严格交替，这是避免 400 Bad Request 错误的黄金法则！
+    // 强制整理聊天记录，绝对保证 user 和 model (AI) 交替出现，防止 400 Bad Request 错误！
     const contents = [];
-    let lastRole = null;
+    const recentHistory = history.slice(-12).filter(msg => msg.text && msg.text.trim() !== ""); 
     
-    const recentHistory = history.slice(-10); // 取最近的 10 条历史以防过长
+    let expectedRole = 'user';
     for (const msg of recentHistory) {
-      const mappedRole = msg.role === 'ai' ? 'model' : 'user';
-      if (mappedRole !== lastRole) {
-        contents.push({ role: mappedRole, parts: [{ text: msg.text }] });
-        lastRole = mappedRole;
+      const role = msg.role === 'ai' ? 'model' : 'user';
+      if (role === expectedRole) {
+        contents.push({ role: role, parts: [{ text: msg.text }] });
+        expectedRole = role === 'user' ? 'model' : 'user';
       } else {
-        // 如果遇到连续相同角色的消息（比如连续两个 user），就把它们合并在一起发
+        // 如果出现连着两条同样身份的信息（比如断网导致连发两条），就把它悄悄合并成一条
         if (contents.length > 0) {
           contents[contents.length - 1].parts[0].text += `\n${msg.text}`;
         }
       }
     }
     
-    if (lastRole === 'user') {
-      contents[contents.length - 1].parts[0].text += `\n${prompt}`;
-    } else {
+    // 最后再把孩子刚才输入的这句话补在最下面
+    if (expectedRole === 'user') {
       contents.push({ role: 'user', parts: [{ text: prompt }] });
+    } else {
+      if (contents.length > 0) {
+        contents[contents.length - 1].parts[0].text += `\n${prompt}`;
+      } else {
+        contents.push({ role: 'user', parts: [{ text: prompt }] });
+      }
     }
 
     const payload = {
@@ -1074,16 +1080,20 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
         });
         
         if (!response.ok) {
-          const errText = await response.text();
-          console.error(`Gemini API Failed: ${response.status}`, errText);
-          throw new Error('API Error');
+          const errData = await response.json();
+          // 精准捕捉并暴露具体的网络错误，如果 API Key 填错就能直接看见了！
+          const errMsg = errData?.error?.message || response.statusText;
+          console.error(`Gemini API Failed:`, errMsg);
+          throw new Error(errMsg);
         }
         
         const result = await response.json();
         return result.candidates?.[0]?.content?.parts?.[0]?.text || "哎呀，我刚刚走神了，宝贝能再说一次吗？🥺";
       } catch (err) {
         console.error("Gemini API Error:", err);
-        if (i === retries - 1) return "抱歉宝贝，我现在脑子有点转不过来了，我们稍后再聊吧~ (网络错误) 🥺";
+        if (i === retries - 1) {
+           return `抱歉宝贝，脑电波被外星人拦截啦 🥺 (具体错误: ${err.message})。请检查一下 API Key 是不是填错或者没开通哦！`;
+        }
         await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
       }
     }
@@ -1100,7 +1110,6 @@ function TreeHoleTab({ themeObj, diaries, chats, onAddDiary, onDeleteDiary, onAd
     await onAddChat(userMsgData);
     
     setIsThinking(true);
-    // 把目前的聊天记录传给 Gemini 大脑
     const reply = await callGeminiWithRetry(userText, sortedChats);
     
     const aiMsgData = { role: 'ai', text: reply, timestamp: new Date().toISOString() };
